@@ -560,8 +560,19 @@ public class ScriptInterface : IScriptInterface, IScriptInterfaceManager, IDispo
                             break;
 
                         case "loadBank":
+                            System.Console.WriteLine(
+                                "[BANK] ScriptInterface recebeu " +
+                                "o comando loadBank."
+                            );
+
                             Stats.GetSpace();
-                            Messenger.Send<BankLoadedMessage, int>((int)MessageChannels.GameEvents);
+
+                            Messenger.Send<
+                            BankLoadedMessage,
+                            int
+                            >(
+                                (int)MessageChannels.GameEvents
+                            );
                             break;
 
                         case "loadShop":

@@ -27,8 +27,27 @@ public partial class ScriptBank : IScriptBank
         _lazyManager = manager;
         _lazyPlayer = player;
 
-        StrongReferenceMessenger.Default.Register<ScriptBank, BankLoadedMessage>(this, (r, m) => r.Loaded = true);
-        StrongReferenceMessenger.Default.Register<ScriptBank, LogoutMessage>(this, (r, m) => r.Loaded = false);
+        StrongReferenceMessenger.Default.Register<
+        ScriptBank,
+        BankLoadedMessage,
+        int
+        >(
+            this,
+          (int)MessageChannels.GameEvents,
+          static (recipient, message) =>
+          recipient.Loaded = true
+        );
+
+        StrongReferenceMessenger.Default.Register<
+        ScriptBank,
+        LogoutMessage,
+        int
+        >(
+            this,
+          (int)MessageChannels.GameEvents,
+          static (recipient, message) =>
+          recipient.Loaded = false
+        );
     }
 
     private readonly Lazy<IFlashUtil> _lazyFlash;
@@ -69,11 +88,58 @@ public partial class ScriptBank : IScriptBank
 
     public void Load(bool waitForLoad = true)
     {
-        if (Flash.GetGameObject("ui.mcPopup.currentLabel") == "Bank")
+        int currentItemCount =
+        ((IScriptBank)this).Items.Count;
+
+        /*
+         * Quando os dados já estiverem presentes,
+         * não é necessário abrir ou carregar novamente.
+         */
+        if (currentItemCount > 0)
+        {
+            Loaded = true;
             return;
-        Send.Packet($"%xt%zm%loadBank%{Map.RoomID}%All%");
-        if (waitForLoad)
-            Wait.ForBankLoad(20);
+        }
+
+        string? popupLabel =
+        Flash.GetGameObject<string>(
+            "ui.mcPopup.currentLabel"
+        );
+
+        /*
+         * Abrir a interface do banco dispara a
+         * requisição HTTP usada pelo cliente atual.
+         */
+        if (
+            !string.Equals(
+                popupLabel,
+                "Bank",
+                System.StringComparison
+                .OrdinalIgnoreCase
+            )
+        )
+        {
+            Open();
+        }
+
+        if (!waitForLoad)
+            return;
+
+        /*
+         * O antigo BankLoadedMessage não é disparado
+         * pelo fluxo HTTP atual. Por isso, aguardamos
+         * diretamente a população da lista de itens.
+         *
+         * 50 tentativas × 100 ms = aproximadamente
+         * cinco segundos.
+         */
+        Loaded =
+        Wait.ForTrue(
+            () =>
+            ((IScriptBank)this)
+            .Items.Count > 0,
+            50
+        );
     }
 
     public bool Swap(string invItem, string bankItem)

@@ -390,3 +390,33 @@ Skua.Installer/FFDecComponentsGenerated.wxs
 Skua.Installer/ComponentsGenerated.wxs
 Skua.Installer/FFDecComponentsGenerated.wxs
 .aider*
+
+# --- Skua Linux port generated/runtime files ---
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/.vscode/
+*.user
+*.suo
+
+Skua.Linux.Client/node_modules/
+Skua.Linux.Client/dist-appimage/
+Skua.Linux.Client/appimage-resources/
+
+artifacts/
+build-logs/
+release/
+
+*.AppImage
+*.AppImage.sha256
+*.log
+*.jsonl
+latest-session.txt
+.env
+.env.*
+
+# Local patch/debug backups
+*.before-*
+*.backup-*
+*.aquastar-original

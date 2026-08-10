@@ -1,4 +1,11 @@
 package skua {
+import flash.events.ProgressEvent;
+import flash.events.TimerEvent;
+import flash.utils.Timer;
+import flash.events.HTTPStatusEvent;
+import flash.events.IOErrorEvent;
+import flash.events.SecurityErrorEvent;
+import flash.events.UncaughtErrorEvent;
 import flash.display.DisplayObject;
 import flash.display.Loader;
 import flash.display.LoaderInfo;
@@ -36,7 +43,7 @@ public class Main extends MovieClip {
     private var versionUrl:String = (sURL + 'api/data/gameversion');
     private var loginURL:String = (sURL + 'api/login/now');
     private var sFile:String;
-    private var sBG:String = 'hideme.swf';
+    private var sBG:String = 'Generic2.swf';
     private var isEU:Boolean;
     private var urlLoader:URLLoader;
     private var vars:Object;
@@ -48,6 +55,17 @@ public class Main extends MovieClip {
     private var customBGReady:MovieClip = null;
     public var customBGLagKiller:MovieClip = null;
     private var customBackgroundURL:String;
+    private var gameLoadMonitor:Timer;
+
+    private function checkpoint(message:String):void {
+        try {
+            if (this.external != null) {
+                this.external.debug("[LOAD] " + message);
+            }
+        } catch (error:Error) {
+            // O diagnóstico não pode interromper o carregamento.
+        }
+    }
 
     public function Main() {
         String.prototype.trim = function():String {
@@ -57,8 +75,11 @@ public class Main extends MovieClip {
 
         Main.instance = this;
 
-        if (stage) this.init();
-        else addEventListener(Event.ADDED_TO_STAGE, this.init);
+        if (stage) {
+            this.init();
+        } else {
+            addEventListener(Event.ADDED_TO_STAGE, this.init);
+        }
     }
 
     public static function loadGame():void {
@@ -88,62 +109,444 @@ public class Main extends MovieClip {
     }
 
     private function onAddedToStage():void {
+        this.checkpoint("onAddedToStage iniciado");
+        this.checkpoint("versionUrl = " + this.versionUrl);
+
         Security.allowDomain('*');
+
         this.urlLoader = new URLLoader();
         this.urlLoader.addEventListener(Event.COMPLETE, this.onDataComplete);
-        this.urlLoader.load(new URLRequest(this.versionUrl));
+        this.urlLoader.addEventListener(
+            HTTPStatusEvent.HTTP_STATUS,
+            this.onVersionHttpStatus
+        );
+        this.urlLoader.addEventListener(
+            IOErrorEvent.IO_ERROR,
+            this.onVersionIoError
+        );
+        this.urlLoader.addEventListener(
+            SecurityErrorEvent.SECURITY_ERROR,
+            this.onVersionSecurityError
+        );
+
+        try {
+            this.checkpoint("iniciando download de gameversion");
+            this.urlLoader.load(new URLRequest(this.versionUrl));
+        } catch (error:Error) {
+            this.checkpoint(
+                "EXCEÇÃO ao iniciar gameversion: " +
+                error.name + ": " + error.message +
+                "\n" + error.getStackTrace()
+            );
+        }
+    }
+
+        private function onVersionHttpStatus(
+        event:HTTPStatusEvent
+    ):void {
+        this.checkpoint(
+            "gameversion HTTP status = " + event.status
+        );
+    }
+
+    private function onVersionIoError(
+        event:IOErrorEvent
+    ):void {
+        this.checkpoint(
+            "gameversion IO_ERROR: " + event.text
+        );
+    }
+
+    private function onVersionSecurityError(
+        event:SecurityErrorEvent
+    ):void {
+        this.checkpoint(
+            "gameversion SECURITY_ERROR: " + event.text
+        );
     }
 
     private function onDataComplete(event:Event):void {
-        this.urlLoader.removeEventListener(Event.COMPLETE, this.onDataComplete);
-        this.vars = JSON.parse(event.target.data);
-        this.sFile = ((this.vars.sFile + '?ver=') + Math.random());
-        this.loadGame()
+        this.checkpoint("gameversion COMPLETE recebido");
+
+        this.urlLoader.removeEventListener(
+            Event.COMPLETE,
+            this.onDataComplete
+        );
+
+        try {
+            var rawData:String = String(event.target.data);
+
+            this.checkpoint(
+                "gameversion tamanho = " + rawData.length
+            );
+
+            this.vars = JSON.parse(rawData);
+
+            this.checkpoint(
+                "gameversion JSON interpretado"
+            );
+
+            this.sFile = (
+                this.vars.sFile +
+                "?ver=" +
+                Math.random()
+            );
+
+            this.checkpoint(
+                "arquivo do jogo = " + this.sFile
+            );
+
+            this.loadGame();
+        } catch (error:Error) {
+            this.checkpoint(
+                "EXCEÇÃO em onDataComplete: " +
+                error.name + ": " + error.message +
+                "\n" + error.getStackTrace()
+            );
+        }
     }
 
     private function loadGame():void {
-        this.loader = new Loader();
-        this.loader.contentLoaderInfo.addEventListener(Event.COMPLETE, this.onComplete);
-        this.loader.load(new URLRequest(this.sURL + 'gamefiles/' + this.sFile));
+        this.checkpoint("loadGame privado iniciado");
+
+        try {
+            this.loader = new Loader();
+
+            this.loader.contentLoaderInfo.addEventListener(
+                Event.OPEN,
+                this.onGameOpen
+            );
+
+            this.loader.contentLoaderInfo.addEventListener(
+                ProgressEvent.PROGRESS,
+                this.onGameProgress
+            );
+
+            this.loader.contentLoaderInfo.addEventListener(
+                Event.INIT,
+                this.onGameInit
+            );
+
+            this.loader.contentLoaderInfo.addEventListener(
+                Event.COMPLETE,
+                this.onComplete
+            );
+
+            this.loader.contentLoaderInfo.addEventListener(
+                HTTPStatusEvent.HTTP_STATUS,
+                this.onGameHttpStatus
+            );
+
+            this.loader.contentLoaderInfo.addEventListener(
+                IOErrorEvent.IO_ERROR,
+                this.onGameIoError
+            );
+
+            this.loader.contentLoaderInfo.addEventListener(
+                SecurityErrorEvent.SECURITY_ERROR,
+                this.onGameSecurityError
+            );
+
+            this.loader.contentLoaderInfo.uncaughtErrorEvents.addEventListener(
+                UncaughtErrorEvent.UNCAUGHT_ERROR,
+                this.onGameUncaughtError
+            );
+
+            var gameUrl:String = this.sURL + "gamefiles/" + this.sFile;
+
+            this.checkpoint(
+                "iniciando Loader.load: " + gameUrl
+            );
+
+            this.gameLoadMonitor = new Timer(1000);
+
+            this.gameLoadMonitor.addEventListener(
+                TimerEvent.TIMER,
+                this.onGameLoadMonitor
+            );
+
+            this.gameLoadMonitor.start();
+
+            this.checkpoint(
+                "monitor de download iniciado"
+            );
+
+            this.loader.load(
+                new URLRequest(gameUrl)
+            );
+        } catch (error:Error) {
+            this.stopGameLoadMonitor();
+
+            this.checkpoint(
+                "EXCEÇÃO ao iniciar Loader.load: " +
+                error.name + ": " +
+                error.message + "\n" +
+                error.getStackTrace()
+            );
+        }
+    }
+
+    private function onGameOpen(event:Event):void {
+        this.checkpoint(
+            "game SWF Event.OPEN recebido"
+        );
+    }
+
+    private function onGameProgress(
+        event:ProgressEvent
+    ):void {
+        this.checkpoint(
+            "game SWF PROGRESS: " +
+            event.bytesLoaded +
+            " / " +
+            event.bytesTotal
+        );
+    }
+
+    private function onGameInit(event:Event):void {
+        this.checkpoint(
+            "game SWF Event.INIT recebido"
+        );
+    }
+
+    private function onGameLoadMonitor(
+        event:TimerEvent
+    ):void {
+        try {
+            this.checkpoint(
+                "monitor: bytesLoaded=" +
+                this.loader.contentLoaderInfo.bytesLoaded +
+                ", bytesTotal=" +
+                this.loader.contentLoaderInfo.bytesTotal +
+                ", url=" +
+                this.loader.contentLoaderInfo.url
+            );
+        } catch (error:Error) {
+            this.checkpoint(
+                "monitor: erro ao consultar LoaderInfo: " +
+                error.name + ": " +
+                error.message
+            );
+        }
+    }
+
+    private function stopGameLoadMonitor():void {
+        if (this.gameLoadMonitor == null) {
+            return;
+        }
+
+        this.gameLoadMonitor.stop();
+
+        this.gameLoadMonitor.removeEventListener(
+            TimerEvent.TIMER,
+            this.onGameLoadMonitor
+        );
+
+        this.gameLoadMonitor = null;
+
+        this.checkpoint(
+            "monitor de download encerrado"
+        );
+    }
+
+    private function onGameHttpStatus(
+        event:HTTPStatusEvent
+    ):void {
+        this.checkpoint(
+            "game SWF HTTP status = " + event.status
+        );
+    }
+
+    private function onGameIoError(
+        event:IOErrorEvent
+    ):void {
+        this.stopGameLoadMonitor();
+
+        this.checkpoint(
+            "game SWF IO_ERROR: " +
+            event.text
+        );
+    }
+
+    private function onGameSecurityError(
+        event:SecurityErrorEvent
+    ):void {
+        this.stopGameLoadMonitor();
+
+        this.checkpoint(
+            "game SWF SECURITY_ERROR: " +
+            event.text
+        );
+    }
+
+    private function onGameUncaughtError(
+        event:UncaughtErrorEvent
+    ):void {
+        var description:String;
+
+        if (event.error is Error) {
+            var error:Error = event.error as Error;
+
+            description =
+                error.name + ": " +
+                error.message + "\n" +
+                error.getStackTrace();
+        } else {
+            description = String(event.error);
+        }
+
+        this.checkpoint(
+            "UNCAUGHT ERROR no jogo: " + description
+        );
+
+        event.preventDefault();
     }
 
     private function onComplete(event:Event):void {
-        this.loader.contentLoaderInfo.removeEventListener(Event.COMPLETE, this.onComplete);
+        this.checkpoint("game SWF Event.COMPLETE recebido");
 
-        this.stg = stage;
-        this.stg.removeChildAt(0);
-        this.game = this.stg.addChild(this.loader.content);
-        this.stg.scaleMode = StageScaleMode.SHOW_ALL;
-        this.stg.align = StageAlign.TOP;
+        this.stopGameLoadMonitor();
 
-        for (var param:String in root.loaderInfo.parameters) {
-            this.game.params[param] = root.loaderInfo.parameters[param];
+
+        this.loader.contentLoaderInfo.removeEventListener(
+            Event.COMPLETE,
+            this.onComplete
+        );
+
+        try {
+            this.checkpoint("onComplete: obtendo stage");
+            this.stg = stage;
+
+            this.checkpoint(
+                "onComplete: stage.numChildren = " +
+                this.stg.numChildren
+            );
+
+            this.checkpoint(
+                "onComplete: removendo loader principal"
+            );
+            this.stg.removeChildAt(0);
+
+            this.checkpoint(
+                "onComplete: adicionando conteúdo do AQW"
+            );
+            this.game = this.stg.addChild(
+                this.loader.content
+            );
+
+            this.checkpoint(
+                "onComplete: conteúdo adicionado"
+            );
+
+            this.stg.scaleMode = StageScaleMode.SHOW_ALL;
+            this.stg.align = StageAlign.TOP;
+
+            this.checkpoint(
+                "onComplete: copiando parâmetros"
+            );
+
+            for (
+                var param:String
+                in root.loaderInfo.parameters
+            ) {
+                this.game.params[param] =
+                    root.loaderInfo.parameters[param];
+            }
+
+            this.checkpoint(
+                "onComplete: atribuindo game.params"
+            );
+
+            this.game.params.vars = this.vars;
+            this.game.params.sURL = this.sURL;
+            this.game.params.sBG = this.sBG;
+            this.game.params.sTitle = this.sTitle;
+            this.game.params.isEU = this.isEU;
+            this.game.params.loginURL = this.loginURL;
+
+            this.checkpoint(
+                "onComplete: configurando eventos do jogo"
+            );
+
+            this.game.addEventListener(
+                MouseEvent.CLICK,
+                this.onGameClick
+            );
+
+            this.game.sfc.addEventListener(
+                SFSEvent.onExtensionResponse,
+                this.onExtensionResponse
+            );
+
+            this.checkpoint(
+                "onComplete: obtendo ApplicationDomain"
+            );
+
+            this.gameDomain =
+                LoaderInfo(event.target).applicationDomain;
+
+            this.checkpoint(
+                "onComplete: iniciando Modules.init"
+            );
+
+            Modules.init();
+
+            this.checkpoint(
+                "onComplete: Modules.init concluído"
+            );
+
+            this.stg.addEventListener(
+                Event.ENTER_FRAME,
+                Modules.handleFrame
+            );
+
+            this.stg.addEventListener(
+                Event.ENTER_FRAME,
+                this.monitorLoginScreen
+            );
+
+            this.game.stage.addEventListener(
+                KeyboardEvent.KEY_DOWN,
+                this.key_StageGame
+            );
+
+            if (
+                this.customBackgroundURL &&
+                this.customBackgroundURL.length > 0
+            ) {
+                this.checkpoint(
+                    "onComplete: iniciando background personalizado"
+                );
+
+                this.initCustomBackground();
+            }
+
+            this.checkpoint(
+                "onComplete: iniciando Auras.initialize"
+            );
+
+            Auras.initialize();
+
+            this.checkpoint(
+                "onComplete: Auras.initialize concluído"
+            );
+
+            this.checkpoint(
+                "onComplete: enviando loaded"
+            );
+
+            this.external.call("loaded");
+
+            this.checkpoint(
+                "onComplete: loaded enviado"
+            );
+        } catch (error:Error) {
+            this.checkpoint(
+                "EXCEÇÃO em onComplete: " +
+                error.name + ": " + error.message +
+                "\n" + error.getStackTrace()
+            );
         }
-
-        this.game.params.vars = this.vars;
-        this.game.params.sURL = this.sURL;
-        this.game.params.sBG = this.sBG;
-        this.game.params.sTitle = this.sTitle;
-        this.game.params.isEU = this.isEU;
-        this.game.params.loginURL = this.loginURL;
-
-        this.game.addEventListener(MouseEvent.CLICK,this.onGameClick);
-        this.game.sfc.addEventListener(SFSEvent.onExtensionResponse, this.onExtensionResponse);
-        this.gameDomain = LoaderInfo(event.target).applicationDomain;
-
-        Modules.init();
-        this.stg.addEventListener(Event.ENTER_FRAME, Modules.handleFrame);
-        this.stg.addEventListener(Event.ENTER_FRAME, this.monitorLoginScreen);
-
-        this.game.stage.addEventListener(KeyboardEvent.KEY_DOWN, this.key_StageGame);
-        
-        if (this.customBackgroundURL && this.customBackgroundURL.length > 0) {
-            this.initCustomBackground();
-        }
-        
-        Auras.initialize();
-        
-        this.external.call('loaded');
     }
 
     public function onExtensionResponse(packet:*):void {

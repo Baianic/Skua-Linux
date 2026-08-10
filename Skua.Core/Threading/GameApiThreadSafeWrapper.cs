@@ -29,11 +29,35 @@ public class GameApiThreadSafeWrapper : IGameApiThreadSafeWrapper
     public async Task StopAsync()
     {
         _processingCts?.Cancel();
-        if (_processingTask != null)
+
+        try
         {
-            await _processingTask;
+            if (_processingTask != null)
+            {
+                await _processingTask
+                .ConfigureAwait(false);
+            }
         }
-        _apiAccessSemaphore.Dispose();
+        catch (OperationCanceledException)
+        when (
+            _processingCts?
+            .IsCancellationRequested
+            == true
+        )
+        {
+            /*
+             * Cancelamento esperado durante
+             * o encerramento do wrapper.
+             */
+        }
+        finally
+        {
+            _processingCts?.Dispose();
+            _processingCts = null;
+            _processingTask = null;
+
+            _apiAccessSemaphore.Dispose();
+        }
     }
 
     public async Task<T> ExecuteAsync<T>(Func<IScriptInterface, T> operation, string operationName = "")

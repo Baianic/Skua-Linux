@@ -9,19 +9,46 @@ public class QuestItemRates extends Module {
     }
 
     override public function onFrame(game:*):void {
+        if (!game || !game.ui || !game.ui.ModalStack) return;
+
         var modalStack:* = game.ui.ModalStack;
-        if (modalStack.numChildren) {
-            var cFrame:* = modalStack.getChildAt(0);
-            if (getQualifiedClassName(cFrame) == "QFrameMC" && cFrame.cnt.core && cFrame.cnt.core.rewardsRoll) {
-                var rewardsRoll:* = cFrame.cnt.core.rewardsRoll;
-                var rewardList:* = cFrame.qData.reward;
-                for (var i:int = 1; i < rewardsRoll.numChildren; i++) {
-                    var rew:* = rewardsRoll.getChildAt(i);
-                    if (rew.strType.text.indexOf("%") == -1) {
-                        for each (var r:* in rewardList) {
-                            if (r.ItemID == rew.ItemID && (!rew.strQ.visible || r.iQty.toString() == rew.strQ.text.substring(1))) {
-                                rew.strType.text += " (" + r.iRate + "%)";
-                                rew.strType.width = 100;
+        if (!modalStack.numChildren) return;
+
+        var cFrame:* = modalStack.getChildAt(0);
+
+        if (
+            getQualifiedClassName(cFrame) == "QFrameMC" &&
+            cFrame.cnt &&
+            cFrame.cnt.core &&
+            cFrame.cnt.core.rewardsRoll &&
+            cFrame.qData &&
+            cFrame.qData.reward
+        ) {
+            var rewardsRoll:* = cFrame.cnt.core.rewardsRoll;
+            var rewardList:* = cFrame.qData.reward;
+
+            for (var i:int = 1; i < rewardsRoll.numChildren; i++) {
+                var rew:* = rewardsRoll.getChildAt(i);
+
+                if (
+                    rew &&
+                    rew.strType &&
+                    rew.strType.text.indexOf("%") == -1
+                ) {
+                    for each (var r:* in rewardList) {
+                        if (
+                            r &&
+                            r.ItemID == rew.ItemID &&
+                            (
+                                !rew.strQ ||
+                                !rew.strQ.visible ||
+                                r.iQty.toString() == rew.strQ.text.substring(1)
+                            )
+                        ) {
+                            rew.strType.text += " (" + r.iRate + "%)";
+                            rew.strType.width = 100;
+
+                            if (rew.strRate) {
                                 rew.strRate.visible = false;
                             }
                         }

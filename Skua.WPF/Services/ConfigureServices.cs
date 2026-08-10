@@ -9,7 +9,7 @@ public static class ConfigureServices
 {
     public static IServiceCollection AddWindowsServices(this IServiceCollection services)
     {
-        services.AddSingleton<IFlashUtil, FlashUtil>();
+        services.AddSingleton<IFlashUtil, RuffleFlashUtil>();
 
         services.AddSingleton<IDispatcherService, DispatcherService>();
         services.AddSingleton<IClipboardService, ClipboardService>();

@@ -60,7 +60,16 @@ public class ScriptWait : IScriptWait
 
         StrongReferenceMessenger.Default.Register<ScriptWait, ItemBoughtMessage>(this, (r, m) => r._itemBuyEvent.Set());
         StrongReferenceMessenger.Default.Register<ScriptWait, ItemSoldMessage>(this, (r, m) => r._itemSellEvent.Set());
-        StrongReferenceMessenger.Default.Register<ScriptWait, BankLoadedMessage>(this, (r, m) => r._bankLoadEvent.Set());
+        StrongReferenceMessenger.Default.Register<
+        ScriptWait,
+        BankLoadedMessage,
+        int
+        >(
+            this,
+          (int)MessageChannels.GameEvents,
+          static (recipient, message) =>
+          recipient._bankLoadEvent.Set()
+        );
     }
 
     public int WAIT_SLEEP { get; set; } = 100;
@@ -207,9 +216,10 @@ public class ScriptWait : IScriptWait
 
     public bool ForBankLoad(int timeout = 20)
     {
-        return _bankLoadEvent.WaitOne(timeout * WAIT_SLEEP);
+        return _bankLoadEvent.WaitOne(
+            timeout * WAIT_SLEEP
+        );
     }
-
     public bool ForQuestAccept(int id, int timeout = 14)
     {
         return ForTrue(() => !Player.Playing || Quests.IsInProgress(id), OverrideTimeout ? QuestActionTimeout : timeout, WAIT_SLEEP / 2);

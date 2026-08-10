@@ -1,0 +1,2580 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Skua Linux</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --skua-topbar: 28px;
+      --skua-purple: #a63ee6;
+      --skua-purple-bright: #bb4df4;
+      --skua-purple-dark: #6d278f;
+      --skua-primary-foreground: #ffffff;
+      --skua-secondary-foreground: #ffffff;
+      --skua-bg: #343434;
+      --skua-bg-2: #3f3f3f;
+      --skua-bg-3: #292929;
+      --skua-border: #575757;
+      --skua-text: #eeeeee;
+      --skua-muted: #b6b6b6;
+      --skua-good: #72d48b;
+      --skua-warn: #efc85a;
+      --skua-bad: #ed6b78;
+      --skua-shadow: 0 9px 24px rgba(0, 0, 0, 0.52);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    #container {
+      position: fixed !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: var(--skua-topbar) !important;
+      bottom: 0 !important;
+      z-index: 0 !important;
+      overflow: hidden !important;
+      isolation: isolate;
+      contain: layout paint style;
+    }
+
+    #container,
+    #ruffle {
+      width: 100% !important;
+      height: calc(100vh - var(--skua-topbar)) !important;
+      overflow: hidden !important;
+    }
+
+    #ruffle {
+      position: relative !important;
+      z-index: 0 !important;
+      display: block !important;
+    }
+
+    #fps-counter {
+      position: fixed;
+      top: calc(var(--skua-topbar) + 5px);
+      left: 5px;
+      z-index: 2147483600;
+      display: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.72);
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    #skua-ui {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483640;
+      pointer-events: none;
+      color: var(--skua-text);
+      font-size: 15px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #skua-menu-bar {
+      position: fixed;
+      z-index: 2147483646;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: var(--skua-topbar);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      border-bottom: 1px solid #191919;
+      background: linear-gradient(#353535, #2a2a2a);
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+      user-select: none;
+    }
+
+    .skua-brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 145px;
+      color: var(--skua-purple-bright);
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .skua-brand-orb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #e9b6ff 0 18%, transparent 19%),
+        radial-gradient(circle at 60% 65%, #9d37dc, #4e1f67 70%);
+      box-shadow: 0 0 0 1px #7b308e;
+    }
+
+    .skua-menu-nav {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+      gap: 2px;
+    }
+
+    .skua-menu-button,
+    .skua-quick-button {
+      border: 0;
+      color: #aa64c9;
+      background: transparent;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: color 100ms ease, background 100ms ease;
+    }
+
+    .skua-menu-button {
+      padding: 0 8px;
+    }
+
+    .skua-menu-button:hover,
+    .skua-quick-button:hover {
+      color: #e8b6ff;
+      background: rgba(166, 62, 230, 0.12);
+    }
+
+    .skua-top-spacer {
+      flex: 1;
+    }
+
+    .skua-backend-state {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 6px;
+      color: #999;
+      font-size: 12px;
+    }
+
+    #skua-backend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--skua-bad);
+      box-shadow: 0 0 0 2px rgba(237, 107, 120, 0.14);
+    }
+
+    #skua-backend-dot.waiting {
+      background: var(--skua-warn);
+    }
+
+    #skua-backend-dot.online {
+      background: var(--skua-good);
+    }
+
+    .skua-backend-restart {
+      height: 22px;
+      min-width: 108px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      padding: 0 8px;
+      margin-left: 0;
+      margin-right: 6px;
+      position: relative;
+      z-index: 1;
+      border: 1px solid var(--skua-purple-dark);
+      border-radius: 3px;
+      background: linear-gradient(var(--skua-purple-bright), var(--skua-purple));
+      color: var(--skua-primary-foreground);
+      font: inherit;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: filter 100ms ease, opacity 100ms ease, background 100ms ease;
+    }
+
+    .skua-backend-restart:hover:not(:disabled) {
+      filter: brightness(1.12);
+    }
+
+    .skua-backend-restart:active:not(:disabled) {
+      filter: brightness(0.92);
+    }
+
+    .skua-backend-restart:disabled {
+      opacity: 0.52;
+      cursor: default;
+    }
+
+    .skua-backend-restart.restarting {
+      opacity: 0.72;
+    }
+
+    .skua-quick-button {
+      height: 100%;
+      padding: 0 10px;
+      color: #b06ed0;
+    }
+
+    #skua-window-layer {
+      position: fixed;
+      inset: var(--skua-topbar) 0 0 0;
+      pointer-events: none;
+    }
+
+    .skua-window {
+      position: absolute;
+      z-index: 10;
+      display: none;
+      min-width: 220px;
+      max-width: calc(100vw - 12px);
+      max-height: calc(100vh - var(--skua-topbar) - 12px);
+      border: 1px solid #242424;
+      border-radius: 3px;
+      background: var(--skua-bg);
+      box-shadow: var(--skua-shadow);
+      overflow: hidden;
+      pointer-events: auto;
+      color: var(--skua-text);
+      resize: both;
+    }
+
+    .skua-window.open {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .skua-window.collapsed .skua-window-body,
+    .skua-window.collapsed .skua-window-footer {
+      display: none;
+    }
+
+    .skua-window-titlebar {
+      height: 26px;
+      display: flex;
+      align-items: center;
+      padding: 0 5px 0 8px;
+      color: #c561ed;
+      background: #303030;
+      border-bottom: 1px solid #4a4a4a;
+      cursor: move;
+      user-select: none;
+    }
+
+    .skua-window-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex: 1;
+      min-width: 0;
+      font-size: 15px;
+    }
+
+    .skua-window-title::before {
+      content: "";
+      width: 11px;
+      height: 11px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #e8b4ff 0 18%, #8735b7 22%, #4a1c64 75%);
+    }
+
+    .skua-window-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .skua-window-control {
+      width: 22px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      color: #a86dc0;
+      background: transparent;
+      cursor: pointer;
+      font: inherit;
+      font-size: 15px;
+    }
+
+    .skua-window-control:hover {
+      color: #fff;
+      background: #4a4a4a;
+    }
+
+    .skua-window-body {
+      padding: 8px;
+      background: #3b3b3b;
+      flex: 1 1 auto;
+      overflow: auto;
+      user-select: none;
+    }
+
+    .skua-window-body input,
+    .skua-window-body textarea,
+    .skua-window-body select,
+    .skua-window-body option,
+    .skua-window-body .skua-log,
+    .skua-window-body .parity-log,
+    .skua-window-body .parity-textarea {
+      user-select: text;
+    }
+
+    .skua-window-footer {
+      padding: 6px 8px;
+      color: #b8b8b8;
+      background: #303030;
+      border-top: 1px solid #4c4c4c;
+      font-size: 12px;
+    }
+
+    .skua-button {
+      min-height: 25px;
+      padding: 4px 10px;
+      border: 1px solid #6f268e;
+      border-radius: 1px;
+      color: #fff;
+      background: linear-gradient(#ad46e7, #902fcd);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.12);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .skua-button:hover:not(:disabled) {
+      background: linear-gradient(#bf5af4, #a23add);
+    }
+
+    .skua-button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .skua-button.secondary {
+      border-color: #595959;
+      background: #484848;
+    }
+
+    .skua-button.secondary:hover:not(:disabled) {
+      background: #555;
+    }
+
+    .skua-button.danger {
+      border-color: #8b3a47;
+      background: linear-gradient(#a7475a, #833441);
+    }
+
+    .skua-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+
+    .skua-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .skua-full {
+      grid-column: 1 / -1;
+    }
+
+    .skua-status-block {
+      margin-bottom: 7px;
+      text-align: center;
+    }
+
+    .skua-status-line {
+      color: #f3f3f3;
+      font-size: 15px;
+    }
+
+    #script-status-text {
+      font-weight: 600;
+    }
+
+    #script-loaded-name {
+      margin-top: 4px;
+      color: #fff;
+      font-size: 16px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .skua-note {
+      color: #b9b9b9;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .skua-log {
+      height: 120px;
+      margin-top: 6px;
+      padding: 5px 6px;
+      overflow: auto;
+      border: 1px solid #4e4e4e;
+      background: #383838;
+      color: #ececec;
+      font-family: Consolas, "Liberation Mono", monospace;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .skua-log-line {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .skua-log-line.error {
+      color: #ff9ca7;
+    }
+
+    .skua-log-line.good {
+      color: #9be9ac;
+    }
+
+    .skua-input,
+    .skua-select {
+      width: 100%;
+      min-height: 25px;
+      padding: 4px 7px;
+      border: 1px solid #565656;
+      border-radius: 1px;
+      outline: none;
+      color: #ededed;
+      background: #303030;
+      font: inherit;
+      font-size: 13px;
+    }
+
+    .skua-input:focus,
+    .skua-select:focus {
+      border-color: #8d3db5;
+    }
+
+    .skua-label {
+      display: block;
+      margin: 0 0 3px;
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    .skua-field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+
+    .skua-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 7px;
+    }
+
+    .skua-toolbar .skua-input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .skua-script-list {
+      height: 300px;
+      overflow: auto;
+      border: 1px solid #484848;
+      background: #333;
+    }
+
+    .skua-script-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 8px;
+      border-bottom: 1px solid #454545;
+      background: #3b3b3b;
+    }
+
+    .skua-script-card:hover {
+      background: #414141;
+    }
+
+    .skua-script-name {
+      color: #f5f5f5;
+      font-weight: 650;
+      font-size: 13px;
+    }
+
+    .skua-script-description {
+      margin-top: 3px;
+      color: #b6b6b6;
+      font-size: 11.5px;
+      line-height: 1.35;
+    }
+
+    .skua-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 5px;
+    }
+
+    .skua-tag {
+      padding: 1px 5px;
+      border-radius: 2px;
+      color: #c9aecf;
+      background: #2f2f2f;
+      border: 1px solid #4e4350;
+      font-size: 10.5px;
+    }
+
+    .skua-script-actions {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      min-width: 72px;
+    }
+
+    .skua-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 5px;
+      border: 1px solid #555;
+      border-radius: 2px;
+      color: #bbb;
+      background: #2e2e2e;
+      font-size: 10.5px;
+    }
+
+    .skua-badge.good {
+      color: #a7efb4;
+      border-color: #3e6d49;
+    }
+
+    .skua-badge.warn {
+      color: #f2d27e;
+      border-color: #705e32;
+    }
+
+    .skua-repo-status {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      min-height: 22px;
+      margin-top: 6px;
+      padding: 4px 7px;
+      color: #aaa;
+      background: #303030;
+      border: 1px solid #454545;
+      font-size: 11.5px;
+    }
+
+    .skua-switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 7px;
+      border: 1px solid #505050;
+      background: #353535;
+    }
+
+    .skua-switch {
+      position: relative;
+      width: 41px;
+      height: 20px;
+      flex: 0 0 auto;
+      padding: 0;
+      border: 1px solid #555;
+      border-radius: 11px;
+      background: #262626;
+      cursor: pointer;
+    }
+
+    .skua-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #aaa;
+      transition: left 120ms ease, background 120ms ease;
+    }
+
+    .skua-switch[aria-checked="true"] {
+      border-color: #7f309e;
+      background: #6c268b;
+    }
+
+    .skua-switch[aria-checked="true"]::after {
+      left: 22px;
+      background: #fff;
+    }
+
+    .skua-switch:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .skua-placeholder-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .skua-placeholder-card {
+      min-height: 58px;
+      padding: 7px;
+      border: 1px solid #4d4d4d;
+      background: #353535;
+    }
+
+    .skua-placeholder-card strong {
+      display: block;
+      color: #ddd;
+      font-size: 12px;
+    }
+
+    .skua-placeholder-card span {
+      display: block;
+      margin-top: 4px;
+      color: #999;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .skua-divider {
+      height: 1px;
+      margin: 7px 0;
+      background: #505050;
+    }
+
+    .skua-fast-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      min-height: 55px;
+      margin: 6px 0;
+    }
+
+    .skua-fast-item {
+      display: flex;
+      gap: 3px;
+    }
+
+    .skua-fast-item .skua-button {
+      flex: 1;
+    }
+
+    #skua-toast-stack {
+      position: fixed;
+      z-index: 2147483647;
+      top: calc(var(--skua-topbar) + 12px);
+      right: 12px;
+      width: min(380px, calc(100vw - 24px));
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      pointer-events: none;
+    }
+
+    .skua-toast {
+      padding: 10px 12px;
+      border: 1px solid #6f268e;
+      border-left-width: 4px;
+      border-radius: 2px;
+      color: #f4f4f4;
+      background: rgba(45, 45, 45, 0.97);
+      box-shadow: 0 5px 18px rgba(0, 0, 0, 0.5);
+      font-size: 13px;
+      line-height: 1.4;
+      animation: skua-toast-in 140ms ease-out;
+    }
+
+    .skua-toast.good {
+      border-left-color: var(--skua-good);
+    }
+
+    .skua-toast.error {
+      border-left-color: var(--skua-bad);
+    }
+
+    @keyframes skua-toast-in {
+      from {
+        opacity: 0;
+        transform: translateY(-5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #window-script-loader {
+      left: 48px;
+      top: 92px;
+      width: 350px;
+    }
+
+    #window-script-repo {
+      left: 300px;
+      top: 120px;
+      width: min(760px, calc(100vw - 330px));
+    }
+
+    #window-auto {
+      right: 42px;
+      top: 42px;
+      width: 290px;
+    }
+
+    #window-jump {
+      right: 42px;
+      top: 110px;
+      width: 300px;
+    }
+
+    #window-fast-travel {
+      left: 125px;
+      top: 58px;
+      width: 470px;
+    }
+
+    #window-options,
+    #window-tools,
+    #window-skills,
+    #window-packets,
+    #window-bank,
+    #window-logs,
+    #window-plugins {
+      left: 38%;
+      top: 90px;
+      width: 390px;
+      max-width: calc(100vw - 30px);
+    }
+
+    #window-logs {
+      width: 560px;
+    }
+
+    #window-logs .skua-log {
+      height: 290px;
+    }
+
+    @media (max-width: 850px) {
+      #skua-window-layer {
+        overflow: auto;
+      }
+
+      .skua-menu-nav .skua-menu-button:nth-child(n+6) {
+        display: none;
+      }
+
+      #window-script-repo {
+        left: 10px;
+        width: calc(100vw - 20px);
+      }
+    }
+
+
+    /* Linux theme adapter: keep the Electron chrome driven by the same
+       serialized theme state used by Skua, instead of leaving hard-coded
+       greys/purples behind after applying a theme. */
+    #skua-ui,
+    .skua-window,
+    .skua-window-body,
+    .skua-window-footer,
+    .skua-note,
+    .skua-label,
+    .skua-status-line,
+    .skua-script-description,
+    .skua-repo-status {
+      color: var(--skua-text);
+    }
+
+    #skua-menu-bar {
+      background: linear-gradient(var(--skua-bg-2), var(--skua-bg-3));
+      border-color: var(--skua-border);
+    }
+
+    .skua-backend-state,
+    .skua-note,
+    .skua-label,
+    .skua-window-footer,
+    .skua-script-description,
+    .skua-repo-status {
+      color: var(--skua-muted);
+    }
+
+    .skua-window,
+    .skua-window-body {
+      background: var(--skua-bg-2);
+    }
+
+    .skua-window-titlebar,
+    .skua-window-footer,
+    .skua-log,
+    .skua-input,
+    .skua-select {
+      color: var(--skua-text);
+      background-color: var(--skua-bg-3);
+      border-color: var(--skua-border);
+    }
+
+    .skua-window-title,
+    .skua-brand,
+    .skua-menu-button,
+    .skua-quick-button,
+    .skua-script-name {
+      color: var(--skua-purple-bright);
+    }
+
+    .skua-button:not(.secondary):not(.danger) {
+      color: var(--skua-primary-foreground);
+      border-color: var(--skua-purple-dark);
+      background: linear-gradient(var(--skua-purple-bright), var(--skua-purple));
+    }
+
+    .skua-button.secondary {
+      color: var(--skua-text);
+      border-color: var(--skua-border);
+      background: var(--skua-bg-3);
+    }
+
+    .skua-window,
+    .skua-window-titlebar,
+    .skua-window-footer,
+    .skua-button,
+    .skua-label,
+    .skua-note,
+    .skua-script-card,
+    .skua-script-name,
+    .skua-script-description,
+    .skua-tags,
+    .skua-tag,
+    .skua-badge {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    input,
+    textarea,
+    select,
+    option,
+    .skua-log,
+    .parity-log,
+    .parity-textarea {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <div id="fps-counter">FPS: 0</div>
+
+  <div id="skua-ui">
+    <div id="skua-toast-stack" aria-live="polite"></div>
+    <header id="skua-menu-bar">
+      <div class="skua-brand">
+        <span class="skua-brand-orb" aria-hidden="true"></span>
+        <span>Skua - 1.4.4.0</span>
+      </div>
+
+      <nav class="skua-menu-nav" aria-label="Skua menu">
+        <button class="skua-menu-button" type="button" data-open-window="window-script-loader">Scripts</button>
+        <button class="skua-menu-button" type="button" data-open-window="window-options">Options</button>
+        <button class="skua-menu-button" type="button" data-open-window="window-fast-travel">Helpers</button>
+        <button class="skua-menu-button" type="button" data-open-window="window-tools">Tools</button>
+        <button class="skua-menu-button" type="button" data-open-window="window-skills">Skills</button>
+        <button class="skua-menu-button" type="button" data-open-window="window-packets">Packets</button>
+        <button class="skua-menu-button" id="bank-open-button" type="button">Bank</button>
+        <button class="skua-menu-button" type="button" data-open-window="window-logs">Logs</button>
+        <button class="skua-menu-button" type="button" data-open-window="window-plugins">Plugins</button>
+      </nav>
+
+      <div class="skua-top-spacer"></div>
+      <div class="skua-backend-state" title="Linux backend connection">
+        <span id="skua-backend-dot"></span>
+        <span id="skua-backend-label">Backend offline</span>
+      </div>
+      <button
+        class="skua-backend-restart"
+        id="skua-backend-restart"
+        type="button"
+        title="Restart Skua backend"
+        aria-label="Restart Skua backend"
+      >Restart Backend</button>
+      <button
+        class="skua-backend-restart skua-ruffle-reload"
+        id="skua-ruffle-reload"
+        type="button"
+        title="Clear Ruffle cache and reload AQW"
+        aria-label="Clear Ruffle cache and reload AQW"
+      >Reload Ruffle</button>
+      <button class="skua-quick-button" type="button" data-open-window="window-auto">Auto</button>
+      <button class="skua-quick-button" type="button" data-open-window="window-jump">Jump</button>
+    </header>
+
+    <div id="skua-window-layer">
+      <section class="skua-window" id="window-script-loader" aria-label="Load Script">
+        <div class="skua-window-titlebar">
+          <div class="skua-window-title">Load Script</div>
+          <div class="skua-window-controls">
+            <button class="skua-window-control" type="button" data-window-minimize>–</button>
+            <button class="skua-window-control" type="button" data-window-close>×</button>
+          </div>
+        </div>
+        <div class="skua-window-body">
+          <div class="skua-status-block">
+            <div class="skua-status-line">Status: <span id="script-status-text">[Waiting for backend]</span></div>
+            <div id="script-loaded-name">No Script Loaded</div>
+          </div>
+
+          <div class="skua-grid-2">
+            <button class="skua-button" id="script-load-button" type="button">Load Script</button>
+            <button class="skua-button" id="script-open-vscode-button" type="button">Open VSCode</button>
+            <button class="skua-button" id="script-edit-button" type="button">Edit Script</button>
+            <button class="skua-button" id="script-search-button" type="button">Search Scripts</button>
+            <button class="skua-button skua-full" id="script-options-button" type="button" disabled title="Script option editor is not yet ported to the Linux UI">Edit Script Options</button>
+            <button class="skua-button skua-full" id="script-start-stop-button" type="button">Start Script</button>
+            <button class="skua-button secondary" id="script-pause-button" type="button">Pause Script</button>
+            <button class="skua-button secondary" id="script-resume-button" type="button">Resume Script</button>
+          </div>
+
+          <div class="skua-log" id="script-log"></div>
+
+          <div class="skua-grid-3" style="margin-top:5px">
+            <button class="skua-button" id="script-log-clear" type="button">Clear</button>
+            <button class="skua-button" id="script-log-copy" type="button">Copy</button>
+            <button class="skua-button" id="script-log-save" type="button">Save</button>
+          </div>
+
+          <button class="skua-button skua-full" id="script-report-button" type="button" style="width:100%;margin-top:5px">Report Issues to Skua</button>
+        </div>
+        <div class="skua-window-footer" id="script-loader-footer">Linux backend · ScriptManager</div>
+      </section>
+
+      <section class="skua-window" id="window-script-repo" aria-label="Search Scripts">
+        <div class="skua-window-titlebar">
+          <div class="skua-window-title">Search Scripts</div>
+          <div class="skua-window-controls">
+            <button class="skua-window-control" type="button" data-window-minimize>–</button>
+            <button class="skua-window-control" type="button" data-window-close>×</button>
+          </div>
+        </div>
+        <div class="skua-window-body">
+          <div class="skua-toolbar">
+            <button class="skua-button" id="repo-update-all" type="button">Update All</button>
+            <button class="skua-button" id="repo-download-all" type="button">Download All</button>
+            <input class="skua-input" id="repo-search-input" type="search" placeholder="Search scripts...">
+            <button class="skua-button" id="repo-refresh" type="button">Refresh</button>
+            <button class="skua-button secondary" id="repo-cancel" type="button" hidden>Cancel</button>
+          </div>
+          <div class="skua-script-list" id="repo-script-list">
+            <div class="skua-note" style="padding:12px">Connect the Linux backend to load the repository.</div>
+          </div>
+          <div class="skua-repo-status" id="repo-status-bar">
+            <span>Scripts: 0</span>
+            <span>Downloaded: 0/0</span>
+            <span>Outdated: 0</span>
+          </div>
+        </div>
+        <div class="skua-window-footer" id="repo-footer">Automatic mirror: project/scripts</div>
+      </section>
+
+      <section class="skua-window" id="window-auto" aria-label="Auto">
+        <div class="skua-window-titlebar">
+          <div class="skua-window-title">Auto</div>
+          <div class="skua-window-controls">
+            <button class="skua-window-control" type="button" data-window-minimize>–</button>
+            <button class="skua-window-control" type="button" data-window-close>×</button>
+          </div>
+        </div>
+        <div class="skua-window-body">
+          <div class="skua-switch-row">
+            <div>
+              <strong style="font-size: 13px">Auto Attack</strong>
+              <div class="skua-note">Attack any available monster continuously using Skua.Core.</div>
+            </div>
+            <button class="skua-switch" id="auto-attack-switch" type="button" role="switch" aria-checked="false"></button>
+          </div>
+          <div class="skua-switch-row" style="margin-top:5px;opacity:.55">
+            <div>
+              <strong style="font-size: 13px">Auto Hunt</strong>
+              <div class="skua-note">Visible to match the Windows tool; not wired in this build.</div>
+            </div>
+            <button class="skua-switch" type="button" role="switch" aria-checked="false" disabled></button>
+          </div>
+          <div class="skua-note" id="auto-status" style="margin-top:6px">Waiting for backend.</div>
+        </div>
+      </section>
+
+      <section class="skua-window" id="window-jump" aria-label="Jump">
+        <div class="skua-window-titlebar">
+          <div class="skua-window-title">Jump</div>
+          <div class="skua-window-controls">
+            <button class="skua-window-control" type="button" data-window-minimize>–</button>
+            <button class="skua-window-control" type="button" data-window-close>×</button>
+          </div>
+        </div>
+        <div class="skua-window-body">
+          <div class="skua-field-row">
+            <div>
+              <label class="skua-label" for="jump-cell">Cell</label>
+              <select class="skua-select" id="jump-cell"></select>
+            </div>
+            <div>
+              <label class="skua-label" for="jump-pad">Pad</label>
+              <select class="skua-select" id="jump-pad"></select>
+            </div>
+          </div>
+          <div class="skua-grid-2">
+            <button class="skua-button" id="jump-current" type="button">Current</button>
+            <button class="skua-button" id="jump-go" type="button">Jump</button>
+          </div>
+          <div class="skua-note" id="jump-status" style="margin-top:6px">Waiting for backend.</div>
+        </div>
+      </section>
+
+      <section class="skua-window" id="window-fast-travel" aria-label="Fast Travel">
+        <div class="skua-window-titlebar">
+          <div class="skua-window-title">Fast Travel</div>
+          <div class="skua-window-controls">
+            <button class="skua-window-control" type="button" data-window-minimize>–</button>
+            <button class="skua-window-control" type="button" data-window-close>×</button>
+          </div>
+        </div>
+        <div class="skua-window-body">
+          <div class="skua-toolbar">
+            <input class="skua-input" id="fast-search" type="search" placeholder="Search">
+            <button class="skua-button" id="fast-save" type="button">Save</button>
+            <button class="skua-button" id="fast-clear" type="button">Clear</button>
+          </div>
+          <div class="skua-fast-list" id="fast-list"></div>
+          <div class="skua-divider"></div>
+          <div class="skua-field-row">
+            <div>
+              <label class="skua-label" for="fast-name">Description Name</label>
+              <input class="skua-input" id="fast-name" value="Battleon">
+            </div>
+            <div>
+              <label class="skua-label" for="fast-map">Map Name</label>
+              <input class="skua-input" id="fast-map" value="battleon">
+            </div>
+          </div>
+          <div class="skua-field-row">
+            <div>
+              <label class="skua-label" for="fast-cell">Cell</label>
+              <input class="skua-input" id="fast-cell" value="Enter">
+            </div>
+            <div>
+              <label class="skua-label" for="fast-pad">Pad</label>
+              <input class="skua-input" id="fast-pad" value="Spawn">
+            </div>
+          </div>
+          <div class="skua-field-row">
+            <div>
+              <label class="skua-label" for="fast-private">Private Number</label>
+              <input class="skua-input" id="fast-private" type="number" min="0" value="0">
+            </div>
+            <div class="skua-grid-2" style="align-self:end">
+              <button class="skua-button secondary" id="fast-current" type="button">Current</button>
+              <button class="skua-button" id="fast-go" type="button">Go</button>
+            </div>
+          </div>
+          <div class="skua-note" id="fast-status">Saved destinations stay in this browser profile.</div>
+        </div>
+      </section>
+
+      <section class="skua-window" id="window-options" aria-label="Options">
+        <div class="skua-window-titlebar"><div class="skua-window-title">Game Options</div><div class="skua-window-controls"><button class="skua-window-control" type="button" data-window-minimize>–</button><button class="skua-window-control" type="button" data-window-close>×</button></div></div>
+        <div class="skua-window-body">
+          <input class="skua-input" placeholder="Search" style="margin-bottom:6px">
+          <div class="skua-placeholder-grid">
+            <div class="skua-placeholder-card"><strong>Game</strong><span>Action Delay · Hunt Delay · Join Map Time · Load Timeout</span></div>
+            <div class="skua-placeholder-card"><strong>Application</strong><span>Window and client preferences</span></div>
+            <div class="skua-placeholder-card"><strong>CoreBots</strong><span>CoreBots behavior and safety settings</span></div>
+            <div class="skua-placeholder-card"><strong>Application Themes</strong><span>Windows-style purple theme shell</span></div>
+            <div class="skua-placeholder-card"><strong>HotKeys</strong><span>Menu and combat shortcuts</span></div>
+          </div>
+          <div class="skua-note" style="margin-top:7px">Visual shell reproduced from the Windows client. Persistence is not wired yet.</div>
+        </div>
+      </section>
+
+      <section class="skua-window" id="window-tools" aria-label="Tools">
+        <div class="skua-window-titlebar"><div class="skua-window-title">Tools</div><div class="skua-window-controls"><button class="skua-window-control" type="button" data-window-minimize>–</button><button class="skua-window-control" type="button" data-window-close>×</button></div></div>
+        <div class="skua-window-body"><div class="skua-placeholder-grid"><button class="skua-button" type="button" data-open-window="window-script-loader">Load Script</button><button class="skua-button" type="button" data-open-window="window-jump">Jump</button><button class="skua-button" type="button" data-open-window="window-auto">Auto</button><button class="skua-button" type="button" data-open-window="window-fast-travel">Fast Travel</button></div></div>
+      </section>
+
+      <section class="skua-window" id="window-skills" aria-label="Skills">
+        <div class="skua-window-titlebar"><div class="skua-window-title">Advanced Skills</div><div class="skua-window-controls"><button class="skua-window-control" type="button" data-window-minimize>–</button><button class="skua-window-control" type="button" data-window-close>×</button></div></div>
+        <div class="skua-window-body"><div class="skua-placeholder-card"><strong>Advanced Skills</strong><span>The original profile/DSL window is represented here. Auto Attack already invokes the Skua.Core advanced skill provider.</span></div></div>
+      </section>
+
+      <section class="skua-window" id="window-packets" aria-label="Packets">
+        <div class="skua-window-titlebar"><div class="skua-window-title">Packet Spammer</div><div class="skua-window-controls"><button class="skua-window-control" type="button" data-window-minimize>–</button><button class="skua-window-control" type="button" data-window-close>×</button></div></div>
+        <div class="skua-window-body"><div class="skua-placeholder-card"><strong>Packets</strong><span>Window shell present to match the original client. Packet editing/spamming is intentionally not wired in this rushed integration.</span></div></div>
+      </section>
+
+
+
+      <section class="skua-window" id="window-logs" aria-label="Logs">
+        <div class="skua-window-titlebar"><div class="skua-window-title">Logs</div><div class="skua-window-controls"><button class="skua-window-control" type="button" data-window-minimize>–</button><button class="skua-window-control" type="button" data-window-close>×</button></div></div>
+        <div class="skua-window-body">
+          <div class="skua-toolbar"><span class="skua-badge">Debug</span><span class="skua-badge good">Script</span><span class="skua-badge">Flash</span></div>
+          <div class="skua-log" id="global-log"></div>
+          <div class="skua-grid-3" style="margin-top:5px"><button class="skua-button" id="global-log-clear" type="button">Clear</button><button class="skua-button" id="global-log-copy" type="button">Copy</button><button class="skua-button" id="global-log-save" type="button">Save</button></div>
+        </div>
+      </section>
+
+      <section class="skua-window" id="window-plugins" aria-label="Plugins">
+        <div class="skua-window-titlebar"><div class="skua-window-title">Plugins</div><div class="skua-window-controls"><button class="skua-window-control" type="button" data-window-minimize>–</button><button class="skua-window-control" type="button" data-window-close>×</button></div></div>
+        <div class="skua-window-body"><div class="skua-grid-2"><button class="skua-button" type="button" disabled>Load All</button><button class="skua-button" type="button" disabled>Unload All</button></div><div class="skua-note" style="margin-top:7px">Plugin host UI reproduced visually; Linux plugin loading is not wired yet.</div></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="./node_modules/@ruffle-rs/ruffle/ruffle.js" onerror="this.onerror=null;this.src='https://unpkg.com/@ruffle-rs/ruffle@0.4.1/ruffle.js';"></script>
+
+  <script>
+    const SHOW_FPS = false;
+    const SKUA_RUNTIME_QUERY = new URLSearchParams(window.location.search);
+    const SKUA_GPU_DIAGNOSTICS = SKUA_RUNTIME_QUERY.get('skua_gpu') === '1';
+    const SKUA_VERBOSE_BRIDGE = false;
+    const PROXY_WS = 'ws://localhost:8181';
+    const SKUA_BRIDGE_URL = 'ws://127.0.0.1:8182';
+    const SERVERS_API = 'https://game.aq.com/game/api/data/servers';
+
+    const FALLBACK_HOSTS = {
+      'sock7.aq.com': [5588, 5589, 5591, 5592, 5593, 5594, 843],
+      'sock8.aq.com': [5588, 5589, 5590, 5591, 5593, 843],
+      'euro.aqw.artix.com': [5588, 843],
+      'asia.game.artix.com': [5588, 843]
+    };
+
+    function proxyEntry(host, port) {
+      return {
+        host,
+        port,
+        proxyUrl: `${PROXY_WS}?host=${encodeURIComponent(host)}&port=${port}`
+      };
+    }
+
+    function addHostPort(map, host, port) {
+      if (!host || !port) return;
+      if (!map.has(host)) map.set(host, new Set());
+      map.get(host).add(Number(port));
+      map.get(host).add(843);
+    }
+
+    function mapToSocketProxies(map) {
+      const proxies = [];
+      for (const [host, ports] of map) {
+        for (const port of ports) proxies.push(proxyEntry(host, port));
+      }
+      return proxies;
+    }
+
+    async function buildSocketProxies() {
+      const map = new Map();
+      for (const [host, ports] of Object.entries(FALLBACK_HOSTS)) {
+        ports.forEach((port) => addHostPort(map, host, port));
+      }
+
+      try {
+        const response = await fetch(SERVERS_API);
+        if (!response.ok) throw new Error(`Artix API respondeu HTTP ${response.status}`);
+        const servers = await response.json();
+        for (const server of servers) addHostPort(map, server.sIP, server.iPort);
+        console.log(`Loaded ${servers.length} servers from Artix API → ${map.size} socket hosts`);
+      } catch (error) {
+        console.warn('Artix server API unavailable, using fallback hosts', error);
+      }
+
+      return mapToSocketProxies(map);
+    }
+
+    function logSkuaRendererGpuCapabilities() {
+      const probe = (type) => {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext(type, {
+          alpha: false,
+          antialias: false,
+          depth: false,
+          stencil: false,
+          preserveDrawingBuffer: false
+        });
+        if (!gl) return { available: false };
+
+        let vendor = '';
+        let renderer = '';
+        try {
+          const debug = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debug) {
+            vendor = gl.getParameter(debug.UNMASKED_VENDOR_WEBGL) ?? '';
+            renderer = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) ?? '';
+          }
+        } catch {}
+
+        return {
+          available: true,
+          vendor: String(vendor),
+          renderer: String(renderer),
+          version: String(gl.getParameter(gl.VERSION) ?? '')
+        };
+      };
+
+      const webgl2 = probe('webgl2');
+      const webgl = probe('webgl');
+      console.log(`[SKUA GPU] renderer webgl2=${JSON.stringify(webgl2)} webgl=${JSON.stringify(webgl)}`);
+    }
+
+    function createRufflePlayer() {
+      const ruffle = window.RufflePlayer.newest();
+      const player = ruffle.createPlayer();
+      player.id = 'ruffle';
+      document.getElementById('container').appendChild(player);
+      return player;
+    }
+
+    function buildRuffleConfig(socketProxy) {
+      return {
+        splashScreen: false,
+        socketProxy,
+        allowFullscreen: true
+      };
+    }
+  </script>
+
+  <script src="./skua-parity-ui.js?skua_release=1.1.10"></script>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', async () => {
+      window.RufflePlayer = window.RufflePlayer || {};
+
+      const reportSkuaRendererError = (scope, error) => {
+        const message = String(error?.message ?? error ?? 'unknown-error');
+        console.error(`[SKUA ERROR] ${scope}: ${message}`);
+        try { appendLog(`${scope}: ${message}`, 'error'); } catch {}
+      };
+
+      window.addEventListener('error', (event) => {
+        if (event?.error) reportSkuaRendererError('Uncaught renderer error', event.error);
+      });
+      window.addEventListener('unhandledrejection', (event) => {
+        reportSkuaRendererError('Unhandled renderer rejection', event?.reason);
+      });
+
+      if (SKUA_GPU_DIAGNOSTICS) logSkuaRendererGpuCapabilities();
+
+      let skuaBridgeSocket = null;
+      let bridgeReconnectTimer = null;
+      let skuaUiBridgeConnected = false;
+      let skuaUiRendererRegistered = false;
+      let skuaUiHostConnected = false;
+      let skuaBackendReady = false;
+      let skuaBackendPhase = 'offline';
+      let skuaBackendReadyTimer = null;
+      let skuaBackendRestartInFlight = false;
+      let skuaRuffleReloadInFlight = false;
+      let skuaBackendCommandId = 0;
+      let skuaShellCommandId = 0;
+      const skuaPendingBackendCommands = new Map();
+      const skuaPendingShellCommands = new Map();
+      let topWindowZ = 30;
+      let scriptStatusPoll = null;
+      let repoSearchTimer = null;
+
+      const uiState = {
+        script: {
+          running: false,
+          paused: false,
+          loadedPath: '',
+          loadedName: '',
+          scriptsDirectory: ''
+        },
+        autoAttack: false,
+        repo: {
+          scripts: [],
+          stats: null,
+          lastAutomaticSyncNoticeSequence: 0
+        }
+      };
+
+      const SKUA_PERF_DIAGNOSTICS = SKUA_RUNTIME_QUERY.get('skua_perf') === '1';
+      const SKUA_PERF_INTERVAL_MS = 1000;
+      const skuaPerfCounters = {
+        packet: 0,
+        packetFromServer: 0,
+        pext: 0,
+        debug: 0,
+        bridgeCall: 0,
+        bridgeSend: 0,
+        bridgeChars: 0
+      };
+      let skuaPerfTimer = null;
+
+      function incrementSkuaPerfCounter(name) {
+        if (SKUA_PERF_DIAGNOSTICS) skuaPerfCounters[name]++;
+      }
+
+      function resetSkuaPerfCounters() {
+        for (const key of Object.keys(skuaPerfCounters)) skuaPerfCounters[key] = 0;
+      }
+
+      function formatSkuaPerfRate(count, elapsedMs) {
+        return elapsedMs <= 0 ? '0.0' : (count * 1000 / elapsedMs).toFixed(1);
+      }
+
+      function startSkuaPerfDiagnostics() {
+        if (!SKUA_PERF_DIAGNOSTICS || skuaPerfTimer !== null) return;
+        let previousTick = performance.now();
+
+        skuaPerfTimer = setInterval(() => {
+          const now = performance.now();
+          const elapsedMs = now - previousTick;
+          const eventLoopLagMs = Math.max(0, elapsedMs - SKUA_PERF_INTERVAL_MS);
+          previousTick = now;
+          const memory = performance.memory;
+          const heapUsedMb = memory ? (memory.usedJSHeapSize / 1024 / 1024).toFixed(1) : 'n/a';
+          const heapTotalMb = memory ? (memory.totalJSHeapSize / 1024 / 1024).toFixed(1) : 'n/a';
+          const heapLimitMb = memory ? (memory.jsHeapSizeLimit / 1024 / 1024).toFixed(0) : 'n/a';
+          const bufferedAmount = skuaBridgeSocket?.bufferedAmount ?? 0;
+          const bridgeState = skuaBridgeSocket?.readyState ?? -1;
+
+          console.log(
+            '[SKUA PERF] ' +
+            `windowMs=${elapsedMs.toFixed(1)} ` +
+            `eventLoopLagMs=${eventLoopLagMs.toFixed(1)} ` +
+            `packet/s=${formatSkuaPerfRate(skuaPerfCounters.packet, elapsedMs)} ` +
+            `packetFromServer/s=${formatSkuaPerfRate(skuaPerfCounters.packetFromServer, elapsedMs)} ` +
+            `pext/s=${formatSkuaPerfRate(skuaPerfCounters.pext, elapsedMs)} ` +
+            `debug/s=${formatSkuaPerfRate(skuaPerfCounters.debug, elapsedMs)} ` +
+            `call/s=${formatSkuaPerfRate(skuaPerfCounters.bridgeCall, elapsedMs)} ` +
+            `send/s=${formatSkuaPerfRate(skuaPerfCounters.bridgeSend, elapsedMs)} ` +
+            `sendChars/s=${formatSkuaPerfRate(skuaPerfCounters.bridgeChars, elapsedMs)} ` +
+            `bufferedAmount=${bufferedAmount} ` +
+            `bridgeState=${bridgeState} ` +
+            `heapUsedMB=${heapUsedMb} ` +
+            `heapTotalMB=${heapTotalMb} ` +
+            `heapLimitMB=${heapLimitMb}`
+          );
+          resetSkuaPerfCounters();
+        }, SKUA_PERF_INTERVAL_MS);
+      }
+
+
+      function normalizeSkuaArgs(value) {
+        if (Array.isArray(value)) return value;
+        if (value === undefined || value === null) return [];
+        return [value];
+      }
+
+      function decodeSkuaResult(result) {
+        if (typeof result !== 'string') return result;
+        try { return JSON.parse(result); } catch { return result; }
+      }
+
+      function appendLog(message, level = 'info') {
+        const stamp = new Date().toLocaleTimeString([], {
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+        const text = `[${stamp}] ${message}`;
+
+        for (const id of ['script-log', 'global-log']) {
+          const container = document.getElementById(id);
+          if (!container) continue;
+          const line = document.createElement('div');
+          line.className = `skua-log-line ${level}`;
+          line.textContent = text;
+          container.appendChild(line);
+          while (container.children.length > 500) container.firstChild.remove();
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+
+      function getLogText(id) {
+        const container = document.getElementById(id);
+        return Array.from(container?.children ?? []).map((line) => line.textContent ?? '').join('\n');
+      }
+
+      async function copyLog(id) {
+        const text = getLogText(id);
+        try {
+          await navigator.clipboard.writeText(text);
+          appendLog('Log copied to clipboard.', 'good');
+        } catch (error) {
+          appendLog(`Copy failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      function saveLog(id) {
+        const blob = new Blob([getLogText(id)], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `skua-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function bringWindowToFront(win) {
+        if (!win) return;
+        win.style.zIndex = String(++topWindowZ);
+      }
+
+      function openWindow(id) {
+        const win = document.getElementById(id);
+        if (!win) return;
+        win.classList.add('open');
+        win.classList.remove('collapsed');
+        bringWindowToFront(win);
+
+        if (id === 'window-script-repo') void refreshRepoSearch();
+        if (id === 'window-jump') void refreshJumpStatus(true);
+      }
+
+      function initializeWindows() {
+        document.querySelectorAll('[data-open-window]').forEach((button) => {
+          button.addEventListener('click', () => openWindow(button.dataset.openWindow));
+        });
+
+        document.querySelectorAll('.skua-window').forEach((win) => {
+          const titlebar = win.querySelector('.skua-window-titlebar');
+          const close = win.querySelector('[data-window-close]');
+          const minimize = win.querySelector('[data-window-minimize]');
+
+          win.addEventListener('pointerdown', () => bringWindowToFront(win));
+          close?.addEventListener('click', () => win.classList.remove('open'));
+          minimize?.addEventListener('click', () => win.classList.toggle('collapsed'));
+
+          let drag = null;
+          titlebar?.addEventListener('pointerdown', (event) => {
+            if (event.target.closest('button,input,select')) return;
+            const rect = win.getBoundingClientRect();
+            drag = {
+              x: event.clientX,
+              y: event.clientY,
+              left: rect.left,
+              top: rect.top - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--skua-topbar'))
+            };
+            titlebar.setPointerCapture(event.pointerId);
+            bringWindowToFront(win);
+          });
+
+          titlebar?.addEventListener('pointermove', (event) => {
+            if (!drag) return;
+            const layer = document.getElementById('skua-window-layer').getBoundingClientRect();
+            const left = Math.max(0, Math.min(layer.width - 80, drag.left + event.clientX - drag.x));
+            const top = Math.max(0, Math.min(layer.height - 26, drag.top + event.clientY - drag.y));
+            win.style.left = `${left}px`;
+            win.style.top = `${top}px`;
+            win.style.right = 'auto';
+          });
+
+          const stopDrag = () => { drag = null; };
+          titlebar?.addEventListener('pointerup', stopDrag);
+          titlebar?.addEventListener('pointercancel', stopDrag);
+        });
+      }
+
+      function updateBackendUi() {
+        const dot = document.getElementById('skua-backend-dot');
+        const label = document.getElementById('skua-backend-label');
+        const restart = document.getElementById('skua-backend-restart');
+        dot.classList.remove('online', 'waiting');
+
+        if (restart) {
+          restart.disabled = !skuaUiBridgeConnected || skuaBackendRestartInFlight;
+          restart.classList.toggle('restarting', skuaBackendRestartInFlight);
+          restart.title = skuaBackendRestartInFlight
+            ? 'Restarting Skua backend…'
+            : 'Restart Skua backend';
+          restart.textContent = skuaBackendRestartInFlight
+            ? 'Restarting…'
+            : 'Restart Backend';
+        }
+
+        const ruffleReload = document.getElementById('skua-ruffle-reload');
+        if (ruffleReload) {
+          ruffleReload.disabled = !skuaUiBridgeConnected || skuaRuffleReloadInFlight;
+          ruffleReload.classList.toggle('restarting', skuaRuffleReloadInFlight);
+          ruffleReload.title = skuaRuffleReloadInFlight
+            ? 'Clearing Ruffle cache and reloading AQW…'
+            : 'Clear Ruffle cache and reload AQW';
+          ruffleReload.textContent = skuaRuffleReloadInFlight
+            ? 'Reloading…'
+            : 'Reload Ruffle';
+        }
+
+        if (skuaBackendRestartInFlight || skuaBackendPhase === 'restarting') {
+          dot.classList.add('waiting');
+          label.textContent = 'Backend restarting';
+          label.title = 'The Electron host is restarting the owned Skua backend process.';
+        } else if (skuaUiHostConnected && skuaBackendReady) {
+          dot.classList.add('online');
+          label.textContent = 'Backend ready';
+          label.title = 'Skua backend is ready for commands.';
+        } else if (skuaUiHostConnected) {
+          dot.classList.add('waiting');
+          label.textContent = 'Backend initializing';
+          label.title = `Backend phase: ${skuaBackendPhase || 'starting'}`;
+        } else if (skuaUiBridgeConnected && skuaUiRendererRegistered) {
+          dot.classList.add('waiting');
+          label.textContent = 'Waiting for backend';
+          label.title = '';
+        } else if (skuaUiBridgeConnected) {
+          dot.classList.add('waiting');
+          label.textContent = 'Registering renderer';
+          label.title = '';
+        } else {
+          label.textContent = 'Backend offline';
+          label.title = '';
+        }
+
+        for (const id of [
+          'script-load-button', 'script-open-vscode-button', 'script-edit-button',
+          'script-search-button', 'script-start-stop-button', 'script-pause-button',
+          'script-resume-button', 'auto-attack-switch', 'jump-current', 'jump-go',
+          'fast-current', 'fast-go', 'bank-open-button'
+        ]) {
+          const element = document.getElementById(id);
+          if (element) element.disabled = !skuaBackendReady;
+        }
+
+        applyScriptStatus(uiState.script);
+      }
+
+      function sendSkuaBridgeMessage(message) {
+        if (!skuaBridgeSocket || skuaBridgeSocket.readyState !== WebSocket.OPEN) return false;
+        try {
+          const serializedMessage = JSON.stringify(message);
+          skuaBridgeSocket.send(serializedMessage);
+          if (SKUA_PERF_DIAGNOSTICS) {
+            skuaPerfCounters.bridgeSend++;
+            skuaPerfCounters.bridgeChars += serializedMessage.length;
+          }
+          return true;
+        } catch (error) {
+          console.error('[Skua Bridge] Falha ao enviar mensagem:', error);
+          return false;
+        }
+      }
+
+      function sendSkuaBackendCommand(name, args = [], timeoutMs = 10000) {
+        if (!skuaUiHostConnected) return Promise.reject(new Error('backend-not-connected'));
+        if (name !== 'backend.status' && !skuaBackendReady) {
+          return Promise.reject(new Error('backend-not-ready'));
+        }
+        const id = ++skuaBackendCommandId;
+
+        return new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            skuaPendingBackendCommands.delete(id);
+            reject(new Error(`Timeout aguardando comando ${name}`));
+          }, timeoutMs);
+
+          skuaPendingBackendCommands.set(id, { resolve, reject, timeout });
+          if (!sendSkuaBridgeMessage({ type: 'command', id, name, args })) {
+            clearTimeout(timeout);
+            skuaPendingBackendCommands.delete(id);
+            reject(new Error('bridge-send-failed'));
+          }
+        });
+      }
+
+      function clearBackendReadinessTimer() {
+        if (skuaBackendReadyTimer !== null) {
+          clearTimeout(skuaBackendReadyTimer);
+          skuaBackendReadyTimer = null;
+        }
+      }
+
+      function scheduleBackendReadinessCheck(delayMs = 150) {
+        clearBackendReadinessTimer();
+        if (!skuaUiHostConnected || skuaBackendReady) return;
+        skuaBackendReadyTimer = setTimeout(() => {
+          skuaBackendReadyTimer = null;
+          void refreshBackendReadiness();
+        }, delayMs);
+      }
+
+      async function refreshBackendReadiness() {
+        if (!skuaUiHostConnected) {
+          skuaBackendReady = false;
+          skuaBackendPhase = 'offline';
+          updateBackendUi();
+          return false;
+        }
+
+        try {
+          const status = await sendSkuaBackendCommand('backend.status', [], 3000);
+          const wasReady = skuaBackendReady;
+          skuaBackendReady = Boolean(status?.ready);
+          skuaBackendPhase = String(status?.phase ?? (skuaBackendReady ? 'ready' : 'starting'));
+          updateBackendUi();
+
+          if (skuaBackendReady && !wasReady) {
+            appendLog('Linux backend ready.', 'good');
+            void refreshScriptStatus(true);
+            void refreshAutoStatus();
+            window.dispatchEvent(new CustomEvent('skua-backend-ready', { detail: status }));
+          } else if (!skuaBackendReady) {
+            scheduleBackendReadinessCheck(500);
+          }
+
+          return skuaBackendReady;
+        } catch (error) {
+          skuaBackendReady = false;
+          skuaBackendPhase = 'starting';
+          updateBackendUi();
+          scheduleBackendReadinessCheck(500);
+          return false;
+        }
+      }
+
+      function sendSkuaShellCommand(name, args = [], timeoutMs = 120000) {
+        if (!skuaUiBridgeConnected) return Promise.reject(new Error('bridge-not-connected'));
+        const id = ++skuaShellCommandId;
+        return new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            skuaPendingShellCommands.delete(id);
+            reject(new Error(`Timeout aguardando shell command ${name}`));
+          }, timeoutMs);
+          skuaPendingShellCommands.set(id, { resolve, reject, timeout });
+          if (!sendSkuaBridgeMessage({ type: 'shell-command', id, name, args })) {
+            clearTimeout(timeout);
+            skuaPendingShellCommands.delete(id);
+            reject(new Error('bridge-send-failed'));
+          }
+        });
+      }
+
+      function settlePending(map, message, fallbackError) {
+        const pending = map.get(message.id);
+        if (!pending) return;
+        clearTimeout(pending.timeout);
+        map.delete(message.id);
+        if (message.success) pending.resolve(message.result);
+        else pending.reject(new Error(message.error ?? fallbackError));
+      }
+
+      function applyScriptStatus(status) {
+        if (status) {
+          uiState.script.running = Boolean(status.scriptRunning ?? uiState.script.running);
+          uiState.script.paused = Boolean(status.scriptPaused ?? uiState.script.paused);
+          uiState.script.loadedPath = status.loadedScript ?? uiState.script.loadedPath;
+          uiState.script.loadedName = status.loadedScriptName ?? uiState.script.loadedName;
+          uiState.script.scriptsDirectory = status.scriptsDirectory ?? uiState.script.scriptsDirectory;
+        }
+
+        const running = uiState.script.running;
+        const paused = uiState.script.paused;
+        const hasScript = Boolean(uiState.script.loadedPath);
+        const statusText = document.getElementById('script-status-text');
+        const loadedName = document.getElementById('script-loaded-name');
+        const startStop = document.getElementById('script-start-stop-button');
+        const pause = document.getElementById('script-pause-button');
+        const resume = document.getElementById('script-resume-button');
+        const edit = document.getElementById('script-edit-button');
+
+        statusText.textContent = !skuaBackendReady
+          ? '[Waiting for backend]'
+          : running
+            ? '[Running]'
+            : paused
+              ? '[Paused]'
+              : hasScript
+                ? '[Stopped]'
+                : '[No script loaded]';
+
+        loadedName.textContent = uiState.script.loadedName || 'No Script Loaded';
+        loadedName.title = uiState.script.loadedPath || '';
+        startStop.textContent = running ? 'Stop Script' : 'Start Script';
+        startStop.disabled = !skuaBackendReady || (!running && !hasScript);
+        pause.disabled = !skuaBackendReady || !running;
+        resume.disabled = !skuaBackendReady || !paused;
+        edit.disabled = !skuaBackendReady || !hasScript;
+        document.getElementById('script-open-vscode-button').disabled = !skuaBackendReady || !uiState.script.scriptsDirectory;
+
+        const footer = document.getElementById('script-loader-footer');
+        footer.textContent = uiState.script.scriptsDirectory
+          ? `scripts: ${uiState.script.scriptsDirectory}`
+          : 'Linux backend · ScriptManager';
+      }
+
+      async function refreshScriptStatus(logErrors = false) {
+        if (!skuaBackendReady) {
+          applyScriptStatus(null);
+          return;
+        }
+        try {
+          const status = await sendSkuaBackendCommand('script.status', [], 10000);
+          applyScriptStatus(status);
+          if (status?.repository) applyRepoStats(status.repository);
+        } catch (error) {
+          if (logErrors) appendLog(`Script status error: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      async function loadScriptFromPath(path) {
+        const result = await sendSkuaBackendCommand('script.load', [path], 15000);
+        uiState.script.loadedPath = result.loadedScript ?? path;
+        uiState.script.loadedName = result.loadedScriptName ?? path.split(/[\\/]/).pop();
+        uiState.script.running = false;
+        uiState.script.paused = false;
+        applyScriptStatus(uiState.script);
+        appendLog(`Script loaded: ${uiState.script.loadedName}`, 'good');
+      }
+
+      async function chooseAndLoadScript() {
+        try {
+          if (!uiState.script.scriptsDirectory) await refreshScriptStatus(true);
+          const selection = await sendSkuaShellCommand('dialog.open-script', [uiState.script.scriptsDirectory || '']);
+          if (!selection?.path) return;
+          await loadScriptFromPath(selection.path);
+        } catch (error) {
+          appendLog(`Load Script failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      async function toggleScriptStartStop() {
+        try {
+          if (uiState.script.running) {
+            appendLog('Stopping script...');
+            await sendSkuaBackendCommand('script.stop', [], 45000);
+            appendLog('Script stopped.', 'good');
+          } else {
+            appendLog('Compiling / starting script...');
+            document.getElementById('script-status-text').textContent = 'Compiling...';
+            await sendSkuaBackendCommand('script.start', [], 45000);
+            appendLog('Script started.', 'good');
+          }
+          await refreshScriptStatus(true);
+        } catch (error) {
+          appendLog(`Script action failed: ${error?.message ?? error}`, 'error');
+          await refreshScriptStatus(false);
+        }
+      }
+
+      async function pauseScript() {
+        try {
+          appendLog('Pausing script...');
+          await sendSkuaBackendCommand('script.pause', [], 45000);
+          appendLog('Script paused. Resume restarts it from the beginning.', 'good');
+          await refreshScriptStatus(true);
+        } catch (error) {
+          appendLog(`Pause failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      async function resumeScript() {
+        try {
+          appendLog('Resuming script from the beginning...');
+          await sendSkuaBackendCommand('script.resume', [], 45000);
+          appendLog('Script resumed.', 'good');
+          await refreshScriptStatus(true);
+        } catch (error) {
+          appendLog(`Resume failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      async function openVSCode(target) {
+        try {
+          const path = target || uiState.script.scriptsDirectory;
+          await sendSkuaShellCommand('shell.open-vscode', [path]);
+          appendLog(`Opened in VSCode: ${path}`, 'good');
+        } catch (error) {
+          appendLog(`VSCode open failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      function showSkuaToast(message, tone = 'good', durationMs = 6500) {
+        const stack = document.getElementById('skua-toast-stack');
+        if (!stack) return;
+
+        const toast = document.createElement('div');
+        toast.className = `skua-toast ${tone}`;
+        toast.textContent = message;
+        stack.appendChild(toast);
+
+        setTimeout(() => {
+          toast.remove();
+        }, durationMs);
+      }
+
+      function applyRepoStats(stats) {
+        if (!stats) return;
+        uiState.repo.stats = stats;
+        document.getElementById('repo-status-bar').innerHTML =
+          `<span>Scripts: ${stats.visible ?? stats.total ?? 0}</span>` +
+          `<span>Downloaded: ${stats.downloaded ?? 0}/${stats.total ?? 0}</span>` +
+          `<span>Outdated: ${stats.outdated ?? 0}</span>`;
+        document.getElementById('repo-footer').textContent = stats.syncRunning
+          ? `Syncing · ${stats.syncMessage ?? ''}`
+          : `${stats.syncMessage ?? 'Automatic project/scripts mirror ready.'}`;
+
+        const cancelButton = document.getElementById('repo-cancel');
+        if (cancelButton) {
+          cancelButton.hidden = !stats.syncRunning;
+          cancelButton.disabled = false;
+        }
+
+        const sequence = Number(stats.syncSequence ?? 0);
+
+        if (
+          !stats.syncRunning &&
+          stats.lastSyncAutomatic === true &&
+          sequence > 0 &&
+          sequence !== uiState.repo.lastAutomaticSyncNoticeSequence
+        ) {
+          uiState.repo.lastAutomaticSyncNoticeSequence = sequence;
+          const count = Number(stats.lastDownloadCount ?? 0);
+
+          showSkuaToast(
+            count === 1
+              ? 'Automatic script sync complete: 1 script downloaded.'
+              : `Automatic script sync complete: ${count} scripts downloaded.`,
+            'good'
+          );
+        }
+      }
+
+      function isSupportRepositoryScript(script) {
+        const name = String(script?.name ?? script?.fileName ?? '').trim().toLowerCase();
+        const path = String(script?.filePath ?? '').trim().toLowerCase();
+        if (!name && !path) return false;
+        if (/^core(?:\b|[ _.-])/.test(name)) return true;
+        const fileName = path.split('/').pop() || '';
+        return /^core(?:\b|[ _.-]).*\.cs$/.test(fileName);
+      }
+
+      function renderRepoScripts(scripts) {
+        const list = document.getElementById('repo-script-list');
+        list.textContent = '';
+        uiState.repo.scripts = (scripts ?? []).filter((script) => !isSupportRepositoryScript(script));
+        scripts = uiState.repo.scripts;
+
+        if (!scripts?.length) {
+          const empty = document.createElement('div');
+          empty.className = 'skua-note';
+          empty.style.padding = '12px';
+          empty.textContent = 'No scripts found.';
+          list.appendChild(empty);
+          return;
+        }
+
+        for (const script of scripts) {
+          const card = document.createElement('div');
+          card.className = 'skua-script-card';
+          card.dataset.filePath = script.filePath;
+          const state = script.outdated ? 'Outdated' : script.downloaded ? 'Downloaded' : 'Missing';
+          const badgeClass = script.outdated ? 'warn' : script.downloaded ? 'good' : '';
+
+          const info = document.createElement('div');
+          const name = document.createElement('div');
+          name.className = 'skua-script-name';
+          name.textContent = script.name || script.fileName || script.filePath;
+          info.appendChild(name);
+
+          const description = document.createElement('div');
+          description.className = 'skua-script-description';
+          description.textContent = script.description || 'No description provided.';
+          info.appendChild(description);
+
+          const tags = document.createElement('div');
+          tags.className = 'skua-tags';
+          for (const tag of (script.tags ?? []).slice(0, 9)) {
+            const tagEl = document.createElement('span');
+            tagEl.className = 'skua-tag';
+            tagEl.textContent = tag;
+            tags.appendChild(tagEl);
+          }
+          const badge = document.createElement('span');
+          badge.className = `skua-badge ${badgeClass}`;
+          badge.textContent = state;
+          tags.appendChild(badge);
+          info.appendChild(tags);
+
+          const actions = document.createElement('div');
+          actions.className = 'skua-script-actions';
+          if (!script.downloaded || script.outdated) {
+            const download = document.createElement('button');
+            download.className = 'skua-button';
+            download.type = 'button';
+            download.dataset.repoAction = 'download';
+            download.textContent = script.outdated ? 'Update' : 'Download';
+            actions.appendChild(download);
+          }
+          const load = document.createElement('button');
+          load.className = 'skua-button secondary';
+          load.type = 'button';
+          load.dataset.repoAction = 'load';
+          load.textContent = 'Load';
+          load.disabled = !script.downloaded;
+          actions.appendChild(load);
+          const start = document.createElement('button');
+          start.className = 'skua-button';
+          start.type = 'button';
+          start.dataset.repoAction = 'start';
+          start.textContent = 'Start';
+          start.disabled = !script.downloaded;
+          actions.appendChild(start);
+
+          card.append(info, actions);
+          list.appendChild(card);
+        }
+      }
+
+      async function refreshRepoSearch() {
+        if (!skuaBackendReady) return;
+        const query = document.getElementById('repo-search-input').value.trim();
+        try {
+          document.getElementById('repo-footer').textContent = 'Loading repository...';
+          const result = await sendSkuaBackendCommand('script.repo.search', [query, 80], 30000);
+          renderRepoScripts(result?.scripts ?? []);
+          applyRepoStats(result?.stats);
+        } catch (error) {
+          document.getElementById('repo-footer').textContent = `Repository error: ${error?.message ?? error}`;
+          appendLog(`Repository search failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      async function waitForRepositoryIdle(label, timeoutMs = 600000) {
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < timeoutMs) {
+          const stats = await sendSkuaBackendCommand('script.repo.status', [], 15000);
+          applyRepoStats(stats);
+          if (!stats?.syncRunning) {
+            await refreshRepoSearch();
+            return stats;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+        throw new Error(`${label} timed out.`);
+      }
+
+      async function runRepoBulk(command, label) {
+        try {
+          document.getElementById('repo-footer').textContent = `${label}...`;
+          appendLog(`${label}...`);
+          const result = await sendSkuaBackendCommand(command, [], 30000);
+          applyRepoStats(result?.stats);
+          const stats = await waitForRepositoryIdle(label);
+          appendLog(stats?.syncMessage ?? `${label} complete.`, 'good');
+        } catch (error) {
+          appendLog(`${label} failed: ${error?.message ?? error}`, 'error');
+          document.getElementById('repo-footer').textContent = `${label} failed: ${error?.message ?? error}`;
+        }
+      }
+
+      async function handleRepoAction(event) {
+        const button = event.target.closest('[data-repo-action]');
+        if (!button) return;
+        const card = button.closest('.skua-script-card');
+        const script = uiState.repo.scripts.find((item) => item.filePath === card?.dataset.filePath);
+        if (!script) return;
+        button.disabled = true;
+
+        try {
+          if (button.dataset.repoAction === 'download') {
+            await sendSkuaBackendCommand('script.repo.download', [script.filePath], 120000);
+            appendLog(`Downloaded: ${script.name}`, 'good');
+            await refreshRepoSearch();
+            return;
+          }
+
+          const loadPath = script.projectPath || script.runtimePath;
+          await loadScriptFromPath(loadPath);
+          openWindow('window-script-loader');
+
+          if (button.dataset.repoAction === 'start') {
+            await sendSkuaBackendCommand('script.start', [], 45000);
+            appendLog(`Started: ${script.name}`, 'good');
+            await refreshScriptStatus(true);
+          }
+        } catch (error) {
+          appendLog(`Script repository action failed: ${error?.message ?? error}`, 'error');
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      function applyAutoState(running) {
+        uiState.autoAttack = Boolean(running);
+        document.getElementById('auto-attack-switch').setAttribute('aria-checked', String(uiState.autoAttack));
+        document.getElementById('auto-status').textContent = `Auto Attack: ${uiState.autoAttack ? 'On' : 'Off'}`;
+      }
+
+      async function refreshAutoStatus() {
+        if (!skuaBackendReady) return;
+        try {
+          const status = await sendSkuaBackendCommand('combat.auto.status');
+          applyAutoState(status?.autoCombatRunning);
+        } catch (error) {
+          document.getElementById('auto-status').textContent = `Error: ${error?.message ?? error}`;
+        }
+      }
+
+      async function toggleAutoAttack() {
+        const button = document.getElementById('auto-attack-switch');
+        button.disabled = true;
+        try {
+          const result = await sendSkuaBackendCommand(uiState.autoAttack ? 'combat.auto.stop' : 'combat.auto.start', [], 45000);
+          applyAutoState(result?.autoCombatRunning);
+          appendLog(`Auto Attack ${result?.autoCombatRunning ? 'enabled' : 'disabled'}.`, 'good');
+        } catch (error) {
+          appendLog(`Auto Attack failed: ${error?.message ?? error}`, 'error');
+          await refreshAutoStatus();
+        } finally {
+          button.disabled = !skuaBackendReady;
+        }
+      }
+
+      async function refreshJumpStatus(setInputs = false) {
+        if (!skuaBackendReady) return;
+        try {
+          const status = await sendSkuaBackendCommand('jump.status');
+          const cellSelect = document.getElementById('jump-cell');
+          const padSelect = document.getElementById('jump-pad');
+          const cells = Array.from(new Set([status?.cell, ...(status?.cells ?? [])].filter(Boolean)));
+          const pads = Array.from(new Set([status?.pad, ...(status?.pads ?? [])].filter(Boolean)));
+          cellSelect.innerHTML = cells.map((cell) => `<option value="${escapeHtml(cell)}">${escapeHtml(cell)}</option>`).join('');
+          padSelect.innerHTML = pads.map((pad) => `<option value="${escapeHtml(pad)}">${escapeHtml(pad)}</option>`).join('');
+          if (setInputs) {
+            cellSelect.value = status?.cell ?? cells[0] ?? '';
+            padSelect.value = status?.pad ?? pads[0] ?? '';
+          }
+          document.getElementById('jump-status').textContent = `${status?.map ?? ''} · ${status?.cell ?? ''} · ${status?.pad ?? ''}`;
+          return status;
+        } catch (error) {
+          document.getElementById('jump-status').textContent = `Jump error: ${error?.message ?? error}`;
+        }
+      }
+
+      async function executeJump() {
+        try {
+          const cell = document.getElementById('jump-cell').value;
+          const pad = document.getElementById('jump-pad').value;
+          const result = await sendSkuaBackendCommand('jump.execute', [cell, pad], 15000);
+          document.getElementById('jump-status').textContent = `${result?.map ?? ''} · ${cell} · ${pad}`;
+          appendLog(`Jump → ${cell} / ${pad}`, 'good');
+        } catch (error) {
+          appendLog(`Jump failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+      }
+
+      const FAST_STORAGE_KEY = 'skua-linux-fast-travel-v1';
+
+      function getFastDestinations() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(FAST_STORAGE_KEY) || '[]');
+          return Array.isArray(parsed) ? parsed : [];
+        } catch { return []; }
+      }
+
+      function renderFastDestinations() {
+        const list = document.getElementById('fast-list');
+        const query = document.getElementById('fast-search').value.trim().toLowerCase();
+        const items = getFastDestinations().filter((item) => !query || `${item.name} ${item.map}`.toLowerCase().includes(query));
+        list.textContent = '';
+        for (const item of items) {
+          const row = document.createElement('div');
+          row.className = 'skua-fast-item';
+          const go = document.createElement('button');
+          go.className = 'skua-button';
+          go.type = 'button';
+          go.textContent = item.name;
+          go.addEventListener('click', () => void travelTo(item));
+          const remove = document.createElement('button');
+          remove.className = 'skua-button secondary';
+          remove.type = 'button';
+          remove.textContent = '×';
+          remove.style.flex = '0 0 25px';
+          remove.addEventListener('click', () => {
+            localStorage.setItem(FAST_STORAGE_KEY, JSON.stringify(getFastDestinations().filter((candidate) => candidate.id !== item.id)));
+            renderFastDestinations();
+          });
+          row.append(go, remove);
+          list.appendChild(row);
+        }
+      }
+
+      function readFastForm() {
+        return {
+          id: crypto.randomUUID(),
+          name: document.getElementById('fast-name').value.trim() || 'Destination',
+          map: document.getElementById('fast-map').value.trim(),
+          cell: document.getElementById('fast-cell').value.trim() || 'Enter',
+          pad: document.getElementById('fast-pad').value.trim() || 'Spawn',
+          privateNumber: Number(document.getElementById('fast-private').value || 0)
+        };
+      }
+
+      async function travelTo(destination) {
+        if (!destination.map) return;
+        try {
+          document.getElementById('fast-status').textContent = `Joining ${destination.map}...`;
+          const result = await sendSkuaBackendCommand('travel.join', [destination.map, destination.cell, destination.pad, destination.privateNumber], 30000);
+          document.getElementById('fast-status').textContent = `Joined ${result?.map ?? destination.map}`;
+          appendLog(`Fast Travel → ${result?.map ?? destination.map}`, 'good');
+        } catch (error) {
+          document.getElementById('fast-status').textContent = `Travel error: ${error?.message ?? error}`;
+          appendLog(`Fast Travel failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      async function fillFastCurrent() {
+        try {
+          const status = await sendSkuaBackendCommand('jump.status');
+          document.getElementById('fast-map').value = status?.map ?? '';
+          document.getElementById('fast-cell').value = status?.cell ?? 'Enter';
+          document.getElementById('fast-pad').value = status?.pad ?? 'Spawn';
+        } catch (error) {
+          appendLog(`Current location failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      async function openBankInGame() {
+        try {
+          await sendSkuaBackendCommand(
+            'bank.open',
+            [],
+            10000
+          );
+          appendLog('Bank opened inside AQW.', 'good');
+        } catch (error) {
+          appendLog(`Bank open failed: ${error?.message ?? error}`, 'error');
+          showSkuaToast(
+            `Bank open failed: ${error?.message ?? error}`,
+            'error'
+          );
+        }
+      }
+
+      async function restartBackendFromUi() {
+        if (skuaBackendRestartInFlight || !skuaUiBridgeConnected) return;
+
+        if (skuaBackendReady) {
+          const confirmed = window.confirm(
+            'Restart the Skua backend? Any running script/automation will stop and must be started again.'
+          );
+          if (!confirmed) return;
+        }
+
+        skuaBackendRestartInFlight = true;
+        skuaBackendReady = false;
+        skuaBackendPhase = 'restarting';
+        clearBackendReadinessTimer();
+        updateBackendUi();
+        appendLog('Backend restart requested from the UI.', 'info');
+
+        try {
+          const result = await sendSkuaShellCommand('backend.restart', [], 12000);
+          appendLog(
+            `Backend process restarted${result?.pid ? ` (PID ${result.pid})` : ''}. Waiting until it is ready.`,
+            'good'
+          );
+          skuaBackendPhase = 'starting';
+        } catch (error) {
+          appendLog(`Backend restart failed: ${error?.message ?? error}`, 'error');
+          showSkuaToast(`Backend restart failed: ${error?.message ?? error}`, 'error');
+          skuaBackendPhase = skuaUiHostConnected ? 'starting' : 'offline';
+        } finally {
+          skuaBackendRestartInFlight = false;
+          updateBackendUi();
+          if (skuaUiHostConnected) scheduleBackendReadinessCheck(200);
+        }
+      }
+
+      async function reloadRuffleFromUi() {
+        if (skuaRuffleReloadInFlight || !skuaUiBridgeConnected) return;
+
+        const confirmed = window.confirm(
+          'Clear the Ruffle/client cache and reload AQW? The current AQW session will reload, and any running script or automation may be interrupted.'
+        );
+        if (!confirmed) return;
+
+        skuaRuffleReloadInFlight = true;
+        updateBackendUi();
+        appendLog('Ruffle cache clear + AQW reload requested from the top bar.', 'info');
+
+        try {
+          const result = await sendSkuaShellCommand(
+            'shell.clear-ruffle-cache-and-reload',
+            [],
+            30000
+          );
+          const before = Number(result?.cacheBytesBefore);
+          const after = Number(result?.cacheBytesAfter);
+          const detail = Number.isFinite(before) && Number.isFinite(after)
+            ? ` (${Math.round(before / 1048576)} MB → ${Math.round(after / 1048576)} MB)`
+            : '';
+          appendLog(`Ruffle cache cleared${detail}. Reloading AQW…`, 'good');
+          showSkuaToast(`Ruffle cache cleared${detail}. Reloading AQW…`, 'good');
+        } catch (error) {
+          skuaRuffleReloadInFlight = false;
+          updateBackendUi();
+          appendLog(`Ruffle reload failed: ${error?.message ?? error}`, 'error');
+          showSkuaToast(`Ruffle reload failed: ${error?.message ?? error}`, 'error');
+        }
+      }
+
+      function initializeActions() {
+        document.getElementById('script-load-button').addEventListener('click', () => void chooseAndLoadScript());
+        document.getElementById('script-open-vscode-button').addEventListener('click', () => void openVSCode(uiState.script.scriptsDirectory));
+        document.getElementById('script-edit-button').addEventListener('click', () => void openVSCode(uiState.script.loadedPath));
+        document.getElementById('script-search-button').addEventListener('click', () => openWindow('window-script-repo'));
+        document.getElementById('script-start-stop-button').addEventListener('click', () => void toggleScriptStartStop());
+        document.getElementById('script-pause-button').addEventListener('click', () => void pauseScript());
+        document.getElementById('script-resume-button').addEventListener('click', () => void resumeScript());
+        document.getElementById('script-report-button').addEventListener('click', () => void sendSkuaShellCommand('shell.open-external', ['https://github.com/auqw/Skua/issues']));
+        document.getElementById('bank-open-button').addEventListener('click', () => void openBankInGame());
+        document.addEventListener('click', (event) => {
+          if (event.target.closest('#skua-backend-restart')) {
+            void restartBackendFromUi();
+            return;
+          }
+          if (event.target.closest('#skua-ruffle-reload')) {
+            void reloadRuffleFromUi();
+          }
+        });
+
+        document.getElementById('script-log-clear').addEventListener('click', () => document.getElementById('script-log').textContent = '');
+        document.getElementById('script-log-copy').addEventListener('click', () => void copyLog('script-log'));
+        document.getElementById('script-log-save').addEventListener('click', () => saveLog('script-log'));
+        document.getElementById('global-log-clear').addEventListener('click', () => document.getElementById('global-log').textContent = '');
+        document.getElementById('global-log-copy').addEventListener('click', () => void copyLog('global-log'));
+        document.getElementById('global-log-save').addEventListener('click', () => saveLog('global-log'));
+
+        document.getElementById('repo-search-input').addEventListener('input', () => {
+          clearTimeout(repoSearchTimer);
+          repoSearchTimer = setTimeout(() => void refreshRepoSearch(), 250);
+        });
+        document.getElementById('repo-refresh').addEventListener('click', async () => {
+          try {
+            const result = await sendSkuaBackendCommand('script.repo.refresh', [], 30000);
+            applyRepoStats(result?.stats);
+            await waitForRepositoryIdle('Repository refresh', 120000);
+          } catch (error) { appendLog(`Repository refresh failed: ${error?.message ?? error}`, 'error'); }
+        });
+        document.getElementById('repo-cancel').addEventListener('click', async () => {
+          try {
+            const result = await sendSkuaBackendCommand('script.repo.cancel', [], 15000);
+            applyRepoStats(result?.stats);
+            appendLog(result?.canceled ? 'Repository cancel requested.' : 'No repository task was running.');
+          } catch (error) {
+            appendLog(`Repository cancel failed: ${error?.message ?? error}`, 'error');
+          }
+        });
+        document.getElementById('repo-download-all').addEventListener('click', () => void runRepoBulk('script.repo.downloadAll', 'Downloading all scripts'));
+        document.getElementById('repo-update-all').addEventListener('click', () => void runRepoBulk('script.repo.updateAll', 'Updating scripts'));
+        document.getElementById('repo-script-list').addEventListener('click', (event) => void handleRepoAction(event));
+
+        document.getElementById('jump-current').addEventListener('click', () => void refreshJumpStatus(true));
+        document.getElementById('jump-go').addEventListener('click', () => void executeJump());
+
+      }
+
+      function scheduleBridgeReconnect() {
+        if (bridgeReconnectTimer !== null) return;
+        bridgeReconnectTimer = setTimeout(() => {
+          bridgeReconnectTimer = null;
+          connectSkuaBridge();
+        }, 1000);
+      }
+
+      function handleBridgeCall(message) {
+        incrementSkuaPerfCounter('bridgeCall');
+        const id = message.id;
+        const functionName = message.function;
+        const args = Array.isArray(message.args) ? message.args : [];
+
+        if (SKUA_VERBOSE_BRIDGE) console.log(`[Skua Bridge] Executando ${functionName}`, args);
+
+        try {
+          if (!window.skuaRuffle || typeof window.skuaRuffle.callExternalInterface !== 'function') {
+            throw new Error('Ruffle ExternalInterface indisponível');
+          }
+          const rawResult = window.skuaRuffle.callExternalInterface(functionName, ...args);
+          decodeSkuaResult(rawResult);
+          sendSkuaBridgeMessage({
+            type: 'result',
+            id,
+            success: true,
+            result: rawResult === undefined ? null : rawResult
+          });
+        } catch (error) {
+          console.error(`[Skua Bridge] Falha em ${functionName}:`, error);
+          sendSkuaBridgeMessage({ type: 'result', id, success: false, error: String(error?.message ?? error) });
+        }
+      }
+
+      function connectSkuaBridge() {
+        if (skuaBridgeSocket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(skuaBridgeSocket.readyState)) return;
+        skuaBridgeSocket = new WebSocket(SKUA_BRIDGE_URL);
+
+        skuaBridgeSocket.addEventListener('open', () => {
+          skuaUiBridgeConnected = true;
+          skuaUiRendererRegistered = false;
+          skuaUiHostConnected = false;
+          skuaBackendReady = false;
+          skuaBackendPhase = 'offline';
+          updateBackendUi();
+          sendSkuaBridgeMessage({ type: 'hello', role: 'renderer' });
+        });
+
+        skuaBridgeSocket.addEventListener('message', (event) => {
+          let message;
+          try { message = JSON.parse(event.data); } catch (error) { console.error('[Skua Bridge] JSON inválido recebido:', error); return; }
+
+          if (message.type === 'hello-ack') {
+            skuaUiRendererRegistered = true;
+            skuaUiHostConnected = Boolean(message.hostConnected);
+            skuaBackendReady = false;
+            skuaBackendPhase = skuaUiHostConnected ? 'starting' : 'offline';
+            updateBackendUi();
+            if (skuaUiHostConnected) {
+              appendLog('Linux backend connected; waiting until it is ready.', 'info');
+              scheduleBackendReadinessCheck(0);
+            }
+            return;
+          }
+
+          if (message.type === 'bridge-status') {
+            const wasConnected = skuaUiHostConnected;
+            skuaUiRendererRegistered = Boolean(message.rendererConnected);
+            skuaUiHostConnected = Boolean(message.hostConnected);
+
+            if (!skuaUiHostConnected) {
+              clearBackendReadinessTimer();
+              skuaBackendReady = false;
+              skuaBackendPhase = 'offline';
+            } else if (!wasConnected) {
+              skuaBackendReady = false;
+              skuaBackendPhase = 'starting';
+            }
+
+            updateBackendUi();
+            if (skuaUiHostConnected && !wasConnected) {
+              appendLog('Linux backend connected; waiting until it is ready.', 'info');
+              scheduleBackendReadinessCheck(0);
+            } else if (!skuaUiHostConnected && wasConnected) {
+              appendLog('Linux backend disconnected.', 'error');
+            }
+            return;
+          }
+
+          if (message.type === 'command-result') {
+            settlePending(skuaPendingBackendCommands, message, 'backend-command-failed');
+            return;
+          }
+
+          if (message.type === 'shell-command-result') {
+            settlePending(skuaPendingShellCommands, message, 'shell-command-failed');
+            return;
+          }
+
+          if (message.type === 'call') {
+            handleBridgeCall(message);
+            return;
+          }
+        });
+
+        skuaBridgeSocket.addEventListener('close', () => {
+          skuaBridgeSocket = null;
+          skuaUiBridgeConnected = false;
+          skuaUiRendererRegistered = false;
+          skuaUiHostConnected = false;
+          clearBackendReadinessTimer();
+          skuaBackendReady = false;
+          skuaBackendPhase = 'offline';
+          for (const pending of [...skuaPendingBackendCommands.values(), ...skuaPendingShellCommands.values()]) {
+            clearTimeout(pending.timeout);
+            pending.reject(new Error('bridge-disconnected'));
+          }
+          skuaPendingBackendCommands.clear();
+          skuaPendingShellCommands.clear();
+          updateBackendUi();
+          scheduleBridgeReconnect();
+        });
+
+        skuaBridgeSocket.addEventListener('error', (error) => console.error('[Skua Bridge] Erro de conexão:', error));
+      }
+
+      function registerSkuaHostCallbacks() {
+        window.debug = function (rawArgs) {
+          incrementSkuaPerfCounter('debug');
+          if (SKUA_VERBOSE_BRIDGE) console.log('[Skua AS3][debug]', ...normalizeSkuaArgs(rawArgs));
+          return null;
+        };
+
+        window.requestLoadGame = function () {
+          setTimeout(() => {
+            if (window.skuaRuffle && typeof window.skuaRuffle.callExternalInterface === 'function') {
+              window.skuaRuffle.callExternalInterface('loadClient');
+            }
+          }, 0);
+          return null;
+        };
+
+        window['pre-load'] = function (rawArgs) {
+          const args = normalizeSkuaArgs(rawArgs);
+          sendSkuaBridgeMessage({ type: 'event', name: 'pre-load', args });
+          return null;
+        };
+
+        window.loaded = function (rawArgs) {
+          const args = normalizeSkuaArgs(rawArgs);
+          sendSkuaBridgeMessage({ type: 'event', name: 'loaded', args });
+          appendLog('AQW / Skua Flash bridge loaded.', 'good');
+          return null;
+        };
+
+        window.pext = function (rawArgs) {
+          incrementSkuaPerfCounter('pext');
+          const args = normalizeSkuaArgs(rawArgs);
+          sendSkuaBridgeMessage({ type: 'event', name: 'pext', args });
+          return null;
+        };
+
+        window.packet = function (rawArgs) {
+          incrementSkuaPerfCounter('packet');
+          const args = normalizeSkuaArgs(rawArgs);
+          sendSkuaBridgeMessage({ type: 'event', name: 'packet', args });
+          return null;
+        };
+
+        window.packetFromServer = function (rawArgs) {
+          incrementSkuaPerfCounter('packetFromServer');
+          const args = normalizeSkuaArgs(rawArgs);
+          sendSkuaBridgeMessage({ type: 'event', name: 'packetFromServer', args });
+          return null;
+        };
+
+        window.openWebsite = function (rawArgs) {
+          const args = normalizeSkuaArgs(rawArgs);
+          sendSkuaBridgeMessage({ type: 'event', name: 'openWebsite', args });
+          return null;
+        };
+      }
+
+      function startFpsCounter() {
+        if (!SHOW_FPS) return;
+        const fpsElement = document.getElementById('fps-counter');
+        fpsElement.style.display = 'block';
+        let frameCount = 0;
+        let lastTime = performance.now();
+        function updateFPS() {
+          frameCount++;
+          const currentTime = performance.now();
+          if (currentTime - lastTime >= 1000) {
+            fpsElement.textContent = `FPS: ${Math.round(frameCount * 1000 / (currentTime - lastTime))}`;
+            frameCount = 0;
+            lastTime = currentTime;
+          }
+          requestAnimationFrame(updateFPS);
+        }
+        updateFPS();
+      }
+
+      window.skuaLinuxUiApi = {
+        sendBackendCommand: sendSkuaBackendCommand,
+        sendShellCommand: sendSkuaShellCommand,
+        appendLog,
+        showToast: showSkuaToast,
+        openWindow,
+        refreshScriptStatus,
+        isBackendConnected: () => skuaUiHostConnected,
+        isBackendReady: () => skuaBackendReady,
+        getBackendPhase: () => skuaBackendPhase,
+        getScriptState: () => ({ ...uiState.script })
+      };
+
+      // UI failures must never abort the independent Ruffle/bridge startup path.
+      // v4.1.1 exposed why this matters: skua-parity-ui replaces the header at
+      // DOMContentLoaded, so a missing optional control threw inside
+      // initializeActions() and aborted this entire callback before Ruffle or
+      // the renderer WebSocket could start.
+      try {
+        initializeWindows();
+        initializeActions();
+        updateBackendUi();
+        startSkuaPerfDiagnostics();
+        appendLog('Skua Linux interface initialized.');
+      } catch (error) {
+        reportSkuaRendererError('UI initialization failed', error);
+      }
+
+      scriptStatusPoll = setInterval(() => {
+        if (skuaBackendReady) {
+          void refreshScriptStatus(false);
+          void refreshAutoStatus();
+        }
+      }, 5000);
+
+      try {
+        if (typeof window.RufflePlayer?.newest !== 'function') {
+          throw new Error('Ruffle runtime did not register window.RufflePlayer.newest()');
+        }
+
+        const [socketProxy, player] = await Promise.all([
+          buildSocketProxies(),
+          Promise.resolve().then(createRufflePlayer)
+        ]);
+
+        window.skuaPlayer = player;
+        window.skuaRuffle = player.ruffle();
+        const ruffleConfig = buildRuffleConfig(socketProxy);
+        window.RufflePlayer.config = ruffleConfig;
+        registerSkuaHostCallbacks();
+        connectSkuaBridge();
+
+        await player.load({
+          url: './skua.swf',
+          allowScriptAccess: true,
+          allowNetworking: 'all',
+          ...ruffleConfig
+        });
+
+        appendLog('skua.swf loaded by Ruffle.', 'good');
+        startFpsCounter();
+      } catch (error) {
+        reportSkuaRendererError('Ruffle/bridge initialization failed', error);
+      }
+    });
+  </script>
+</body>
+</html>

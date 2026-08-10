@@ -180,7 +180,11 @@ public static class Services
         services.AddSingleton<PluginsViewModel>();
 
         services.AddSingleton<HotKeysViewModel>();
+        services.AddSingleton<HotKeysViewModel>();
+
+        #if WINDOWS
         services.AddSingleton(HotKeys.CreateHotKeys);
+        #endif
 
         services.AddSingleton(CoreBots.CreateViewModel);
         services.AddSingleton(CoreBots.CreateOptions);
@@ -245,6 +249,7 @@ public static class Services
                         typeof(Console).GetTypeInfo().Assembly.Location,
                         typeof(object).Assembly.Location,
                         typeof(Enumerable).Assembly.Location,
+                        typeof(System.Diagnostics.Process).Assembly.Location,
                         typeof(ScriptManager).Assembly.Location,
                         Path.Combine(Path.GetDirectoryName(typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly.Location)!, "System.Runtime.dll")
                     };
@@ -277,7 +282,6 @@ public static class Services
             "System.Collections",
             "System.Collections.Generic",
             "System.Diagnostics",
-            "System.Drawing",
             "System.Dynamic",
             "System.Globalization",
             "System.IO",
@@ -291,7 +295,6 @@ public static class Services
             "System.Threading",
             "System.Threading.Tasks",
             "System.Timers",
-            "System.Windows.Forms",
             "Skua.Core",
             "Skua.Core.Interfaces",
             "Skua.Core.Models",

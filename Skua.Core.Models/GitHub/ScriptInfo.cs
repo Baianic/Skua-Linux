@@ -23,9 +23,6 @@ public class ScriptInfo
     [JsonProperty("sha256")]
     public string? Sha256 { get; set; }
 
-    [JsonProperty("creationDate")]
-    public DateTime? CreationDate { get; set; }
-
     [JsonProperty("fileName")]
     public string FileName { get; set; }
 

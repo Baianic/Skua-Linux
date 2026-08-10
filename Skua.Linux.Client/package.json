@@ -1,0 +1,88 @@
+{
+  "name": "skua-linux",
+  "version": "1.2.0",
+  "main": "main.js",
+  "autor": "aquasp",
+  "description": "Skua Linux - AQW automation client powered by Skua.Core and Ruffle",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Baianic/Skua-Linux.git"
+  },
+  "build": {
+    "appId": "com.skua.linux",
+    "productName": "Skua Linux",
+    "executableName": "skua-linux",
+    "artifactName": "Skua-Linux-${version}-${arch}.${ext}",
+    "asar": true,
+    "compression": "normal",
+    "directories": {
+      "output": "dist-appimage"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "skua-parity-ui.js",
+      "skua.swf",
+      "Icon.png",
+      "package.json",
+      "node_modules/ws/**/*",
+      "node_modules/@ruffle-rs/ruffle/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "appimage-resources/backend",
+        "to": "backend",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Game",
+      "icon": "Icon.png",
+      "desktop": {
+        "entry": {
+          "Name": "Skua Linux",
+          "Comment": "Skua client for AdventureQuest Worlds",
+          "Categories": "Game;",
+          "Icon": "skua-linux",
+          "Terminal": false,
+          "Type": "Application",
+          "StartupWMClass": "skua-linux"
+        }
+      }
+    },
+    "asarUnpack": [
+      "skua.swf",
+      "node_modules/@ruffle-rs/ruffle/**/*.wasm"
+    ]
+  },
+  "scripts": {
+    "server": "python3 -m http.server 8766",
+    "electron": "electron .",
+    "start": "electron .",
+    "build": "electron-builder",
+    "appimage": "electron-builder --linux AppImage --x64 --publish never"
+  },
+  "dependencies": {
+    "ws": "^8.18.3",
+    "@ruffle-rs/ruffle": "0.4.1"
+  },
+  "devDependencies": {
+    "electron": "38.3.0",
+    "electron-builder": "26.0.12"
+  },
+  "allowScripts": {
+    "electron@38.3.0": true,
+    "electron-winstaller@5.4.0": true
+  },
+  "author": "Skua Linux"
+}

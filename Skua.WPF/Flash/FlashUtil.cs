@@ -30,6 +30,35 @@ public class FlashUtil : IFlashUtil
     private readonly Lazy<IScriptManager> _lazyManager;
     private AxShockwaveFlash? Flash;
 
+    private static readonly string FlashLogPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                                               "Skua",
+                                                               "flash-calls.log"
+    );
+
+    private static readonly object FlashLogLock = new();
+
+    private static void LogFlash(string message)
+    {
+        try
+        {
+            string directory = Path.GetDirectoryName(FlashLogPath)!;
+            Directory.CreateDirectory(directory);
+
+            lock (FlashLogLock)
+            {
+                File.AppendAllText(
+                    FlashLogPath,
+                    $"{DateTime.Now:O} {message}{Environment.NewLine}"
+                );
+            }
+        }
+        catch
+        {
+            // O diagnóstico nunca deve interromper o cliente.
+        }
+    }
+
     public event FlashCallHandler? FlashCall;
 
     public void InitializeFlash()
@@ -61,11 +90,30 @@ public class FlashUtil : IFlashUtil
             writer.Seek(0, SeekOrigin.Begin);
             flash.OcxState = new AxHost.State(stream, 1, false, null);
         }
-        catch
+        catch (Exception ex)
         {
-            if (MessageBox.Show($"Please, uninstall and then reinstall CleanFlash via the Gif provided \r\nDo you want view the instructional Gif?", "Clean Flash missing/installed incorrectly", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes)
-                Ioc.Default.GetRequiredService<IProcessService>().OpenLink("https://imgur.com/ztsLYZ1");
-            Environment.Exit(0);
+            string logPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                          "Skua",
+                                          "flash-init-error.log"
+            );
+
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+
+            File.WriteAllText(
+                logPath,
+                $"{DateTime.Now:O}{Environment.NewLine}" +
+                $"{ex}{Environment.NewLine}"
+            );
+
+            MessageBox.Show(
+                ex.ToString(),
+                            "Erro real ao inicializar o Flash",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+            );
+
+            Environment.Exit(1);
         }
         finally
         {
@@ -106,12 +154,35 @@ public class FlashUtil : IFlashUtil
     }
 
 
-    private void CallHandler(object sender, _IShockwaveFlashEvents_FlashCallEvent e)
+    private void CallHandler(
+        object sender,
+        _IShockwaveFlashEvents_FlashCallEvent e)
     {
-        XElement el = XElement.Parse(e.request);
-        string function = el.Attribute("name")!.Value;
-        object[] args = el.Elements().Select(x => FromFlashXml(x)).ToArray();
-        FlashCall?.Invoke(function, args);
+        LogFlash($"Flash -> C# RAW: {e.request}");
+
+        try
+        {
+            XElement el = XElement.Parse(e.request);
+            string function = el.Attribute("name")!.Value;
+            object[] args = el.Elements()
+            .Select(x => FromFlashXml(x))
+            .ToArray();
+
+            LogFlash($"Flash -> C#: função '{function}'");
+            LogFlash($"Disparando handlers de '{function}'");
+
+            FlashCall?.Invoke(function, args);
+
+            LogFlash($"Handlers de '{function}' concluídos");
+        }
+        catch (Exception ex)
+        {
+            LogFlash(
+                $"ERRO ao processar Flash -> C#:{Environment.NewLine}{ex}"
+            );
+
+            throw;
+        }
     }
 
     public string Call(string function, params object[] args)
@@ -132,28 +203,71 @@ public class FlashUtil : IFlashUtil
         }
     }
 
-    public object Call(string function, Type type, params object[] args)
+    public object Call(
+        string function,
+        Type type,
+        params object[] args)
     {
-        if (_lazyManager.Value.ShouldExit && Thread.CurrentThread.Name == "Script Thread")
-            _lazyManager.Value.ScriptCts?.Token.ThrowIfCancellationRequested();
+        if (_lazyManager.Value.ShouldExit &&
+            Thread.CurrentThread.Name == "Script Thread")
+        {
+            _lazyManager.Value.ScriptCts?.Token
+            .ThrowIfCancellationRequested();
+        }
+
         try
         {
-            StringBuilder req = new StringBuilder().Append($"<invoke name=\"{function}\" returntype=\"xml\">");
+            StringBuilder req = new StringBuilder()
+            .Append(
+                $"<invoke name=\"{function}\" returntype=\"xml\">"
+            );
+
             if (args.Length > 0)
             {
                 req.Append("<arguments>");
-                args.ForEach(o => req.Append(ToFlashXml(o)));
+
+                args.ForEach(
+                    argument => req.Append(ToFlashXml(argument))
+                );
+
                 req.Append("</arguments>");
             }
+
             req.Append("</invoke>");
-            string result = Flash?.CallFunction(req.ToString())!;
+
+            string requestXml = req.ToString();
+
+            LogFlash($"C# -> Flash: função '{function}'");
+            LogFlash($"C# -> Flash XML: {requestXml}");
+
+            string result = Flash?.CallFunction(requestXml)!;
+
+            LogFlash(
+                $"Resposta síncrona de '{function}': " +
+                $"{result ?? "<null>"}"
+            );
+
             XElement el = XElement.Parse(result);
-            return el is null || el.FirstNode is null ? default : Convert.ChangeType(el.FirstNode.ToString(), type);
+
+            return el is null || el.FirstNode is null
+            ? default!
+            : Convert.ChangeType(
+                el.FirstNode.ToString(),
+                                 type
+            );
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            _messenger.Send<FlashErrorMessage>(new(e, function, args));
-            return default;
+            LogFlash(
+                $"ERRO C# -> Flash na função '{function}':" +
+                $"{Environment.NewLine}{ex}"
+            );
+
+            _messenger.Send<FlashErrorMessage>(
+                new(ex, function, args)
+            );
+
+            return default!;
         }
     }
 

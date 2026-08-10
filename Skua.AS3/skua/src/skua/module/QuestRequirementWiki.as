@@ -15,14 +15,16 @@ public class QuestRequirementWiki extends Module
 
     override public function onFrame(game:*):void
     {
+        if (!game || !game.ui || !game.ui.ModalStack) return;
+
         var modalStack:* = game.ui.ModalStack;
-        if (!modalStack || modalStack.numChildren == 0) return;
+        if (modalStack.numChildren == 0) return;
 
         var frame:* = modalStack.getChildAt(0);
         if (!frame || !frame.cnt || !frame.cnt.core) return;
 
         var req:TextField = frame.cnt.core.strReq;
-        if (!req || req.text.length == 0) return;
+        if (!req || req.text.length == 0 || !req.parent) return;
 
         if (req.parent.getChildByName("skuaWikiMulti")) return;
 

@@ -85,33 +85,63 @@ public partial class ScriptSkill : IScriptSkill
     {
         if (BaseProvider is null)
         {
-            BaseProvider = CreateAdvancedSkillProvider();
+            BaseProvider =
+            CreateAdvancedSkillProvider();
+
             BaseProvider.Load(genericSkills);
             _provider = BaseProvider;
         }
-        _provider = OverrideProvider ?? BaseProvider;
+
+        _provider =
+        OverrideProvider ??
+        BaseProvider;
 
         if (TimerRunning)
+        {
             return;
+        }
 
         _skillThread = new(async () =>
         {
-            _skillsCTS = new();
+            _skillsCTS =
+            new CancellationTokenSource();
+
             try
             {
-                await _Timer(_skillsCTS.Token);
+                await _Timer(
+                    _skillsCTS.Token
+                );
             }
-            catch { }
+            catch (
+                OperationCanceledException
+            ) when (
+                _skillsCTS?
+                .IsCancellationRequested ==
+                true
+            )
+            {
+                // Cancelamento esperado durante Stop().
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(
+                    "Erro no loop de habilidades:"
+                );
+
+                Console.Error.WriteLine(ex);
+            }
             finally
             {
                 _skillsCTS?.Dispose();
                 _skillsCTS = null;
                 TimerRunning = false;
+
             }
         })
         {
             Name = "Skill Timer"
         };
+
         _skillThread.Start();
         TimerRunning = true;
     }
@@ -291,17 +321,60 @@ public partial class ScriptSkill : IScriptSkill
 
             if (_playerSkills is not null)
             {
-                int k = 0;
-                using FlashArray<object> skills = (FlashArray<object>)Flash.CreateFlashObject<object>("world.actions.active").ToArray();
-                foreach (FlashObject<object> skill in skills)
+                /*
+                 * Mantemos o objeto raiz para controlar
+                 * corretamente o ciclo de vida do link.
+                 *
+                 * O IFlashArray oferece acesso por índice,
+                 * funcionando tanto com FlashArray quanto
+                 * com RuffleFlashArray.
+                 */
+                using IFlashObject<object> skillsObject =
+                Flash.CreateFlashObject<object>(
+                    "world.actions.active"
+                );
+
+                IFlashArray<object> skills =
+                skillsObject.ToArray();
+
+                /*
+                 * O tamanho do array é uma propriedade do
+                 * objeto ActionScript original.
+                 */
+                using IFlashObject<int> lengthObject =
+                skillsObject.GetChild<int>(
+                    "length"
+                );
+
+                int skillCount =
+                Math.Min(
+                    lengthObject.Value,
+                    _playerSkills.Length
+                );
+
+                for (
+                    int k = 0;
+                k < skillCount;
+                k++
+                )
                 {
-                    if (k >= _playerSkills.Length)
-                        break;
-                    using FlashObject<long> ts = (FlashObject<long>)skill.GetChild<long>("ts");
-                    ts.Value = _playerSkills[k++]?.LastUse ?? 0;
+                    /*
+                     * Cada item e seu campo ts possuem links
+                     * próprios e devem ser descartados depois
+                     * da utilização.
+                     */
+                    using IFlashObject<object> skill =
+                    skills.Get(k);
+
+                    using IFlashObject<long> ts =
+                    skill.GetChild<long>("ts");
+
+                    ts.Value =
+                    _playerSkills[k]?.LastUse ?? 0;
                 }
             }
         }
+
 
         // Store the last rank if the player is ranking up
         _lastRank = Player.CurrentClassRank;

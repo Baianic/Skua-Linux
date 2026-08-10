@@ -36,13 +36,26 @@ public partial class GameContainerUserControl : UserControl
         Loaded -= GameContainer_Loaded;
     }
 
-    private void LoadingFlash(string function, params object[] args)
+    private void LoadingFlash(
+        string function,
+        params object[] args
+    )
     {
-        if (function == "loaded")
+        if (function != "loaded")
         {
-            LoadingBar.Visibility = Visibility.Hidden;
-            gameContainer.Visibility = Visibility.Visible;
-            _bot.Flash.FlashCall -= LoadingFlash;
+            return;
         }
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            LoadingBar.Visibility =
+            Visibility.Hidden;
+
+            gameContainer.Visibility =
+            Visibility.Collapsed;
+
+            _bot.Flash.FlashCall -=
+            LoadingFlash;
+        });
     }
 }

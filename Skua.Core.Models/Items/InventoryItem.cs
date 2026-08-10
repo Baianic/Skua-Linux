@@ -9,7 +9,9 @@ public class InventoryItem : ItemBase
     /// The character (instance) ID of this item.
     /// </summary>
     [JsonProperty("CharItemID")]
+    [JsonConverter(typeof(FlexibleIntConverter))]
     public int CharItemID { get; set; }
+
 
     /// <summary>
     /// Indicates if the item is equipped.
