@@ -1,12 +1,12 @@
 {
   "name": "skua-linux",
-  "version": "1.2.0",
+  "version": "1.3.0-rc.1",
   "main": "main.js",
   "autor": "aquasp",
   "description": "Skua Linux - AQW automation client powered by Skua.Core and Ruffle",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Baianic/Skua-Linux.git"
+    "url": "https://github.com/aquaspy/aquastar-ruffle.git"
   },
   "build": {
     "appId": "com.skua.linux",
@@ -74,7 +74,7 @@
   },
   "dependencies": {
     "ws": "^8.18.3",
-    "@ruffle-rs/ruffle": "0.4.1"
+    "@ruffle-rs/ruffle": "file:vendor/aqw-ruffle-v2.8-skualinux-r1.tgz"
   },
   "devDependencies": {
     "electron": "38.3.0",

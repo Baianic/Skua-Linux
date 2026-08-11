@@ -28,6 +28,8 @@ const skuaThemeBaseUrl = 'http://127.0.0.1:8766/__skua_themes__/';
 
 Menu.setApplicationMenu(null);
 
+const SKUA_RUFFLE_CACHE_KEY = 'aqw-ruffle-v2.8-31da3d44-skualinux-r1-webtime-scale9off';
+
 let gameWin = null;
 
 let skuaStaticServer = null;
@@ -154,7 +156,7 @@ function findSkuaBackendLaunch() {
   }
 
   // Development layout used by this Linux port.
-  const projectRoot = path.resolve(__dirname, '..');
+  const projectRoot = path.resolve(__dirname, '..', 'skua-linux');
   const backendProject = path.join(projectRoot, 'Skua.Backend.Linux', 'Skua.Backend.Linux.csproj');
   const debugBinary = path.join(projectRoot, 'Skua.Backend.Linux', 'bin', 'Debug', 'net10.0', 'Skua.Backend.Linux');
   const debugDll = path.join(projectRoot, 'Skua.Backend.Linux', 'bin', 'Debug', 'net10.0', 'Skua.Backend.Linux.dll');
@@ -1840,6 +1842,64 @@ function configureAqwNetworkTrace() {
   );
 }
 
+async function prepareSkuaRuffleHttpCache() {
+  const markerPath = path.join(
+    app.getPath('userData'),
+    'skua-ruffle-http-cache-key.txt'
+  );
+
+  let previousKey = null;
+
+  try {
+    previousKey = (
+      await fs.promises.readFile(
+        markerPath,
+        'utf8'
+      )
+    ).trim();
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      console.warn(
+        '[Skua Cache] Could not read Ruffle cache marker:',
+        error
+      );
+    }
+  }
+
+  if (previousKey === SKUA_RUFFLE_CACHE_KEY) {
+    console.log(
+      `[Skua Cache] Ruffle HTTP cache already prepared: ${SKUA_RUFFLE_CACHE_KEY}`
+    );
+
+    return;
+  }
+
+  console.log(
+    '[Skua Cache] Ruffle engine changed; clearing Chromium HTTP cache.',
+    {
+      previousKey: previousKey || '<none>',
+      currentKey: SKUA_RUFFLE_CACHE_KEY
+    }
+  );
+
+  await session.defaultSession.clearCache();
+
+  await fs.promises.mkdir(
+    path.dirname(markerPath),
+    { recursive: true }
+  );
+
+  await fs.promises.writeFile(
+    markerPath,
+    `${SKUA_RUFFLE_CACHE_KEY}\n`,
+    'utf8'
+  );
+
+  console.log(
+    `[Skua Cache] Ruffle HTTP cache prepared: ${SKUA_RUFFLE_CACHE_KEY}`
+  );
+}
+
 function createGameWindow() {
   skuaBootLog('creating BrowserWindow');
   gameWin = new BrowserWindow({
@@ -2047,6 +2107,8 @@ app.on('child-process-gone', (_event, details) => {
 });
 
 app.whenReady().then(async () => {
+  await prepareSkuaRuffleHttpCache();
+
   skuaBootLog('Electron app ready');
   await startSkuaStaticServer();
   configureAqwCors();

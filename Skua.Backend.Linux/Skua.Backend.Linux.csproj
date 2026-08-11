@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Skua.Core.Interfaces\Skua.Core.Interfaces.csproj" />
-    <ProjectReference Include="..\Skua.Core\Skua.Core.csproj" />
+    <ProjectReference Include="..\..\..\.wine\drive_c\SkuaDev\Skua-master\Skua.Core.Interfaces\Skua.Core.Interfaces.csproj" />
+    <ProjectReference Include="..\..\..\.wine\drive_c\SkuaDev\Skua-master\Skua.Core\Skua.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

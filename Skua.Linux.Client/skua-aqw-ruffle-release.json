@@ -1,0 +1,45 @@
+{
+  "release": "Skua Linux 1.3.0 RC1",
+  "releaseVersion": "1.3.0-rc.1",
+  "engine": "AQW-Ruffle V2.8",
+  "forkRepository": "JuanMateusMarinho/AQW-Ruffle",
+  "forkCommit": "31da3d44633d58b91c5be97718a1e99e21fb84cd",
+  "compatibilityPatch": "Skua Linux Web Compatibility R1",
+  "sourceFixes": [
+    "Stage resize clock: std::time::Instant -> web_time::Instant",
+    "WGPU encode timer: std::time::Instant -> web_time::Instant",
+    "WGPU submit timer: std::time::Instant -> web_time::Instant",
+    "ruffle_render_wgpu direct dependency: web-time 1.1.0",
+    "AQW custom Scale9 disabled; standard Ruffle scaling-grid path retained"
+  ],
+  "rendererOptimizations": {
+    "blendTargetShrink": "ENABLED / fork default",
+    "blendScissor": "ENABLED / fork default",
+    "aqwCustomScale9": "DISABLED / compatibility workaround"
+  },
+  "cache": {
+    "changed": true,
+    "cacheKey": "aqw-ruffle-v2.8-31da3d44-skualinux-r1-webtime-scale9off",
+    "marker": "<Electron userData>/skua-ruffle-http-cache-key.txt",
+    "strategy": "clear Chromium HTTP cache only when AQW-Ruffle engine fingerprint changes"
+  },
+  "loader": {
+    "changed": true,
+    "previousRuffleScriptSrc": "./node_modules/@ruffle-rs/ruffle/ruffle.js",
+    "previousRuffleScriptTag": "<script src=\"./node_modules/@ruffle-rs/ruffle/ruffle.js\" onerror=\"this.onerror=null;this.src='https://unpkg.com/@ruffle-rs/ruffle@0.4.1/ruffle.js';\"></script>",
+    "releaseRuffleScriptSrc": "./node_modules/@ruffle-rs/ruffle/ruffle.js",
+    "panicTraceMarkerRemoved": true,
+    "cdnFallbackAllowed": false
+  },
+  "previousVersion": "1.2.1-aqwruffle.8",
+  "previousRuffleDependency": "file:vendor/aqw-ruffle-v2.8-test6c-scale9off.tgz",
+  "releaseRuffleDependency": "file:vendor/aqw-ruffle-v2.8-skualinux-r1.tgz",
+  "ruffleJsSha256": "4c35d62c2a7d2d1217e0195b3f9bd4165c9ffbe6b93b9acd31ddf4cbb1057eae",
+  "wasm": [
+    {
+      "name": "8c2ce80744d95fd6c7db.wasm",
+      "bytes": 16239336,
+      "sha256": "911e150465b79cb45e15e1be32c9639e77b3d1485c6b2aa17939aafd0bb06606"
+    }
+  ]
+}

@@ -1,13 +1,12 @@
 #!/usr/bin/env fish
 
-set -l electron_root (cd (dirname (status --current-filename)); and pwd -P)
-set -l repo_root (cd "$electron_root/.."; and pwd -P)
-set -l backend_root "$repo_root"
-set -l backend_project "$repo_root/Skua.Backend.Linux/Skua.Backend.Linux.csproj"
+set -l backend_root "$HOME/Projetos/skua-linux"
+set -l electron_root "$HOME/Projetos/aquastar-ruffle"
+set -l backend_project "$backend_root/Skua.Backend.Linux/Skua.Backend.Linux.csproj"
 set -l backend_stage "$electron_root/appimage-resources/backend"
 set -l dist_dir "$electron_root/dist-appimage"
-set -l final_dir "$repo_root/artifacts"
-set -l log_dir "$repo_root/build-logs/appimage-v1.2.0"
+set -l final_dir "$HOME/Downloads/GPT BOT AQW/AppImage"
+set -l log_dir "$HOME/Downloads/GPT BOT AQW/Logs/appimage-v4.3-release"
 set -l log_file "$log_dir/build-appimage.log"
 set -g SKUA_BUILD_LOG_FILE "$log_file"
 set -l size_report "$log_dir/size-report.txt"
@@ -43,7 +42,7 @@ require_command sha256sum
 require_command find
 
 if test (uname -m) != "x86_64"
-    log "ERROR: this AppImage target is currently validated only for x86_64."
+    log "ERROR: this first AppImage target is validated only for x86_64."
     exit 1
 end
 
@@ -57,13 +56,15 @@ if not test -f "$electron_root/package.json"
     exit 1
 end
 
-log "Skua Linux AppImage 1.2.0 release-candidate build"
-log "Repository: $repo_root"
-log "Backend:    $backend_project"
-log "Electron:   $electron_root"
-log "Logs:       $log_file"
+log "Skua Linux AppImage v4.3 release candidate build"
+log "Backend:  $backend_root"
+log "Electron: $electron_root"
+log "Logs:     $log_file"
 log "Automatic FPS monitoring: removed. Optional PERF/GPU traces remain OFF by default."
 
+# Keep the build deterministic and make sure the pinned self-hosted Ruffle
+# package is installed locally before electron-builder collects production
+# dependencies.
 cd "$electron_root"
 run_logged npm install --no-audit --no-fund
 
@@ -71,6 +72,10 @@ if test -d "$electron_root/node_modules/@ruffle-rs/ruffle"
     log "Ruffle package size: "(du -sh "$electron_root/node_modules/@ruffle-rs/ruffle" | awk '{print $1}')
 end
 
+# Publish the .NET backend with its own .NET 10 runtime. Do NOT trim or create
+# a single-file bundle: Skua uses Roslyn scripting, reflection and dynamically
+# loaded assemblies, all of which are safer in the normal multi-file publish
+# layout.
 rm -rf "$backend_stage"
 mkdir -p "$backend_stage"
 
@@ -124,10 +129,12 @@ set -l output_name (basename "$appimage")
 set -l final_appimage "$final_dir/$output_name"
 cp -f "$appimage" "$final_appimage"
 chmod +x "$final_appimage"
-sha256sum "$final_appimage" | tee "$final_appimage.sha256" | tee -a "$SKUA_BUILD_LOG_FILE"
+sha256sum "$final_appimage" | tee "$final_appimage.sha256" | tee -a "$log_file"
 
+# Build-size audit. This is informational only: no runtime files are deleted
+# based on this report. It gives us evidence for future size optimizations.
 begin
-    echo "Skua Linux AppImage 1.2.0 size report"
+    echo "Skua Linux AppImage v4.2.1 size report"
     echo "Generated: "(date -Iseconds)
     echo
     echo "== Final artifact =="
@@ -162,7 +169,11 @@ begin
 end > "$size_report"
 
 log "Size report: $size_report"
+
 log ""
 log "SUCCESS"
 log "AppImage: $final_appimage"
 log "SHA256:   $final_appimage.sha256"
+log ""
+log "Run it with:"
+log "  \"$final_appimage\""
